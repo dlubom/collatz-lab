@@ -80,3 +80,35 @@ fn summary(
         termination,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rug::Integer;
+
+    use super::*;
+
+    fn exact(value: u128) -> PositiveInteger {
+        PositiveInteger::new(Integer::from(value)).expect("unit-test inputs are positive")
+    }
+
+    #[test]
+    fn exact_step_and_runner_cover_both_branches_and_normal_stops() {
+        assert_eq!(bigint_step(&exact(6)), exact(3));
+        assert_eq!(bigint_step(&exact(3)), exact(10));
+
+        let terminal = run_bigint(exact(1), 0);
+        assert_eq!(terminal.last, exact(1));
+        assert_eq!(terminal.termination, Termination::ReachedOne);
+
+        let limited = run_bigint(exact(8), 1);
+        assert_eq!(limited.last, exact(4));
+        assert_eq!(limited.observed_peak, exact(8));
+        assert_eq!(limited.first_descent_step, Some(1));
+        assert_eq!(limited.termination, Termination::StepLimitReached);
+
+        let growth_then_descent = run_bigint(exact(3), 7);
+        assert_eq!(growth_then_descent.last, exact(1));
+        assert_eq!(growth_then_descent.observed_peak, exact(16));
+        assert_eq!(growth_then_descent.first_descent_step, Some(6));
+    }
+}

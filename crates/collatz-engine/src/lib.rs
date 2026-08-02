@@ -37,6 +37,27 @@ mod tests {
             PositiveU128Error::Zero.to_string(),
             "Collatz input must be positive"
         );
+
+        assert_eq!(
+            PositiveInteger::new(rug::Integer::from(0)),
+            Err(PositiveIntegerError::Zero)
+        );
+        assert_eq!(
+            PositiveInteger::new(rug::Integer::from(-1)),
+            Err(PositiveIntegerError::Negative)
+        );
+        assert_eq!(
+            PositiveIntegerError::Zero.to_string(),
+            "Collatz input must be positive, not zero"
+        );
+        assert_eq!(
+            PositiveIntegerError::Negative.to_string(),
+            "Collatz input must be positive, not negative"
+        );
+
+        let exact = PositiveInteger::from(positive(u128::MAX));
+        assert_eq!(exact.get(), &rug::Integer::from(u128::MAX));
+        assert_eq!(rug::Integer::from(exact), rug::Integer::from(u128::MAX));
     }
 
     #[test]

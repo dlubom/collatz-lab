@@ -150,3 +150,51 @@ fn summary(
         termination,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rug::Integer;
+
+    use super::*;
+
+    fn positive(value: u128) -> PositiveU128 {
+        PositiveU128::new(value).expect("unit-test inputs are positive")
+    }
+
+    #[test]
+    fn hybrid_runner_covers_bounded_terminal_limit_and_metrics() {
+        let terminal = run_hybrid(positive(1), 0);
+        assert_eq!(terminal.last, HybridValue::U128(positive(1)));
+        assert_eq!(terminal.termination, Termination::ReachedOne);
+
+        let limited = run_hybrid(positive(2), 0);
+        assert_eq!(limited.last, HybridValue::U128(positive(2)));
+        assert_eq!(limited.termination, Termination::StepLimitReached);
+
+        let complete = run_hybrid(positive(3), 7);
+        assert_eq!(complete.last, HybridValue::U128(positive(1)));
+        assert_eq!(complete.observed_peak, HybridValue::U128(positive(16)));
+        assert_eq!(complete.first_descent_step, Some(6));
+        assert_eq!(complete.promotion_count, 0);
+    }
+
+    #[test]
+    fn hybrid_runner_promotes_current_value_once_and_never_demotes() {
+        let summary = run_hybrid(positive(u128::MAX), 4);
+        let expected_peak: Integer = (Integer::from(9) << 127) - 2;
+
+        assert_eq!(summary.completed_classical_steps, 4);
+        assert_eq!(summary.promotion_count, 1);
+        assert_eq!(summary.first_descent_step, None);
+        assert_eq!(summary.observed_peak.to_integer(), expected_peak);
+        assert!(summary.last.as_u128().is_none());
+        assert!(summary.last.as_bigint().is_some());
+
+        let exact_peak = HybridValue::BigInt(PositiveInteger::from(positive(10)));
+        let bounded_current = HybridValue::U128(positive(12));
+        assert_eq!(
+            updated_peak(exact_peak, &bounded_current).to_integer(),
+            Integer::from(12)
+        );
+    }
+}
