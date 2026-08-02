@@ -1,6 +1,6 @@
 use std::{hint::black_box, time::Duration};
 
-use collatz_engine::{PositiveInteger, PositiveU128, run, run_bigint, run_hybrid};
+use collatz_engine::{PositiveInteger, PositiveU128, run, run_bigint, run_hybrid, step};
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use rug::Integer;
 
@@ -9,6 +9,17 @@ fn positive(value: u128) -> PositiveU128 {
 }
 
 fn benchmark_engines(criterion: &mut Criterion) {
+    let mut step_group = criterion.benchmark_group("classical_steps");
+    let even_start = positive(6);
+    let odd_start = positive(3);
+    step_group.bench_function("reference/even/6", |bencher| {
+        bencher.iter(|| black_box(step(black_box(even_start))))
+    });
+    step_group.bench_function("reference/odd/3", |bencher| {
+        bencher.iter(|| black_box(step(black_box(odd_start))))
+    });
+    step_group.finish();
+
     let mut group = criterion.benchmark_group("classical_engine_runs");
     let start_27 = positive(27);
     let exact_27 = PositiveInteger::from(start_27);

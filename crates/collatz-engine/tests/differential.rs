@@ -111,3 +111,29 @@ fn a_limit_can_stop_before_promotion_and_a_promoted_run_never_demotes() {
     assert!(matches!(promoted.observed_peak, HybridValue::BigInt(_)));
     assert_eq!(promoted.promotion_count, 1);
 }
+
+#[test]
+fn every_observed_post_promotion_prefix_matches_bigint_from_start() {
+    let start = bounded(u128::MAX);
+
+    for limit in 1..=32 {
+        let bigint = run_bigint(PositiveInteger::from(start), limit);
+        let hybrid = run_hybrid(start, limit);
+
+        assert!(matches!(hybrid.last, HybridValue::BigInt(_)));
+        assert!(matches!(hybrid.observed_peak, HybridValue::BigInt(_)));
+        assert_eq!(hybrid.last.to_integer(), bigint.last.into_inner());
+        assert_eq!(
+            hybrid.observed_peak.to_integer(),
+            bigint.observed_peak.into_inner()
+        );
+        assert_eq!(
+            hybrid.completed_classical_steps,
+            bigint.completed_classical_steps
+        );
+        assert_eq!(hybrid.classical_step_limit, bigint.classical_step_limit);
+        assert_eq!(hybrid.first_descent_step, bigint.first_descent_step);
+        assert_eq!(hybrid.promotion_count, 1);
+        assert_eq!(hybrid.termination, bigint.termination);
+    }
+}
