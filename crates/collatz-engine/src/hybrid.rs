@@ -17,12 +17,14 @@ pub fn run_hybrid(start: PositiveU128, classical_step_limit: u64) -> HybridRunSu
         if is_one(&current) {
             return summary(
                 start,
-                current,
-                completed_classical_steps,
                 classical_step_limit,
-                observed_peak,
-                first_descent_step,
-                promotion_count,
+                HybridProgress {
+                    last: current,
+                    completed_classical_steps,
+                    observed_peak,
+                    first_descent_step,
+                    promotion_count,
+                },
                 Termination::ReachedOne,
             );
         }
@@ -30,12 +32,14 @@ pub fn run_hybrid(start: PositiveU128, classical_step_limit: u64) -> HybridRunSu
         if completed_classical_steps == classical_step_limit {
             return summary(
                 start,
-                current,
-                completed_classical_steps,
                 classical_step_limit,
-                observed_peak,
-                first_descent_step,
-                promotion_count,
+                HybridProgress {
+                    last: current,
+                    completed_classical_steps,
+                    observed_peak,
+                    first_descent_step,
+                    promotion_count,
+                },
                 Termination::StepLimitReached,
             );
         }
@@ -121,24 +125,28 @@ fn updated_peak(peak: HybridValue, current: &HybridValue) -> HybridValue {
     }
 }
 
-fn summary(
-    start: PositiveU128,
+struct HybridProgress {
     last: HybridValue,
     completed_classical_steps: u64,
-    classical_step_limit: u64,
     observed_peak: HybridValue,
     first_descent_step: Option<u64>,
     promotion_count: u8,
+}
+
+fn summary(
+    start: PositiveU128,
+    classical_step_limit: u64,
+    progress: HybridProgress,
     termination: Termination,
 ) -> HybridRunSummary {
     HybridRunSummary {
         start,
-        last,
-        completed_classical_steps,
+        last: progress.last,
+        completed_classical_steps: progress.completed_classical_steps,
         classical_step_limit,
-        observed_peak,
-        first_descent_step,
-        promotion_count,
+        observed_peak: progress.observed_peak,
+        first_descent_step: progress.first_descent_step,
+        promotion_count: progress.promotion_count,
         termination,
     }
 }
