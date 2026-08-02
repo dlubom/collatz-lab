@@ -1,0 +1,201 @@
+# Experimental Methodology
+
+- **Status:** Accepted authority for Collatz Lab experiments
+- **Mathematical terms:** [`mathematical-definitions.md`](mathematical-definitions.md)
+- **Minimal storage rules:** [`../research/results/README.md`](../research/results/README.md)
+
+## Unit of analysis
+
+An experimental observation is the result of applying one versioned experiment
+configuration to one reconstructible positive integer. A family experiment is
+a declared collection of such observations plus a declared aggregation and
+control-comparison rule.
+
+Exploratory and confirmatory runs must be distinguishable. Changing the input
+selection, primary metric, limit, control algorithm, or seed creates a new
+configuration identifier; it does not silently amend an existing run.
+
+## Input and provenance contract
+
+Every input record must provide:
+
+| Field | Requirement |
+|---|---|
+| Stable input ID and name | Unique inside the catalog and readable by humans |
+| Family | A declared category such as `mersenne` or `manual` |
+| Construction | Exact formula plus all generator parameters |
+| Source | Citation or URL when external; `user-supplied` when manual |
+| External ID | OEIS or database identifier when one exists |
+| Retrieval date | Required for externally obtained or changeable data |
+| Bit length | Recomputed from the constructed value |
+| Decimal digits | Recomputed from the constructed value |
+| SHA-256 | Required when a value is imported rather than generated locally |
+| Reconstruction note | Enough information to rebuild the value without copying a huge decimal expansion |
+
+The constructed value must be validated against declared bit length, decimal
+digit count, and imported hash before execution. A disagreement yields
+`invalid_input` or `verification_failed`; it is not repaired silently.
+
+## Experiment configuration
+
+A configuration has a stable experiment ID, schema version, ordered input IDs,
+construction parameters, selected engine policy, step/time/resource limits,
+optional verified-bound reference, metric set, control specification, output
+format version, and program commit. The canonical serialized form determines a
+configuration ID by SHA-256 once serialization rules are implemented.
+
+An experiment ID identifies the research question, while a configuration ID
+identifies an exact executable setup. Repeating a configuration creates a new
+run ID and retains the same configuration ID.
+
+## Matched random controls
+
+Whenever a special input or family is compared statistically, the default
+control group must have:
+
+- exactly the same bit length for each matched input;
+- a comparable and explicitly recorded number of observations;
+- a declared deterministic pseudorandom algorithm and version;
+- a recorded seed;
+- a deterministic mapping from `(experiment ID, input ID, replicate index)` to
+  generated control values;
+- the same engine policy, limits, metric definitions, and hardware class used
+  for the special inputs.
+
+For bit length `b`, controls are sampled from `[2^(b-1), 2^b - 1]`. Rejection
+rules such as excluding even numbers, duplicates, or members of the target
+family must be declared before generation because each changes the control
+population. The MVP default includes both parities and rejects only duplicates
+within the control set and exact equality with its matched special value.
+
+A recorded seed is insufficient by itself: the pseudorandom algorithm, output
+mapping, rejection order, and implementation version are also part of the
+configuration.
+
+## Metrics
+
+The authoritative formulas are in
+[`mathematical-definitions.md`](mathematical-definitions.md). Each result records
+whether a metric is complete, prefix-only, unavailable, or derived.
+
+1. **Classical steps to one:** total count of classical transitions, only for
+   `reached_one` or when an independently verified suffix supplies an exact
+   count.
+2. **Compressed iterations:** count of compressed checkpoints actually
+   executed.
+3. **First descent:** first classical index whose value is below the start.
+4. **Trajectory maximum:** maximum over the completed trajectory or explicitly
+   labeled observed prefix.
+5. **Peak ratio:** exact or reproducibly rounded maximum divided by start.
+6. **Bit-length gain:** peak bit length minus input bit length.
+7. **Initial growth-run length:** consecutive strictly increasing compressed
+   checkpoints from the start.
+8. **Execution time:** monotonic elapsed time for the declared timed region;
+   never a cross-machine invariant.
+9. **Engine transitions:** count of numeric-representation promotions; expected
+   to be zero or one for the MVP hybrid policy.
+10. **Termination status:** one status from the controlled vocabulary below.
+11. **Reached verified bound:** endpoint and cited bound used for any certified
+    early stop.
+12. **Configuration ID:** identifier of the exact experimental setup.
+
+The MVP result/logbook summary tracks only: experiment ID, input name and
+provenance, exact construction, input bit length, classical step count when
+known, peak value or bit length, first descent, termination status, elapsed
+time, program commit, and validation method. The remaining metrics may be
+present in the line-oriented result schema but are not required in the first
+human summary.
+
+### Normalized views
+
+For a completed or consistently censored comparison, report as applicable:
+
+- classical steps divided by input bit length;
+- a declared logarithm of the peak divided by input bit length;
+- difference from the matched-control median and position relative to declared
+  control quantiles;
+- rank inside the declared family and sample.
+
+Do not compare completed values with censored prefix metrics as though they
+were equivalent. Quantiles, ties, missing observations, and small samples must
+be reported explicitly. No statistical significance test is mandated in the
+MVP.
+
+## Termination statuses
+
+| Status | Meaning |
+|---|---|
+| `reached_one` | The executed trajectory observed `1` |
+| `reached_verified_bound` | Execution entered a cited independently verified interval under the safe-stop contract |
+| `step_limit_reached` | The step limit was reached before another terminal condition |
+| `time_limit_reached` | The declared time limit stopped execution |
+| `resource_limit_reached` | A declared memory or other resource limit stopped execution |
+| `invalid_input` | The number definition or value violates the input contract |
+| `verification_failed` | Reconstruction, hash, cross-engine, or independent verification disagreed |
+
+Arithmetic overflow in the bounded reference engine is an engine outcome, not
+a successful experiment status. A reference-only run records it explicitly;
+the hybrid policy promotes before the operation and records the promotion.
+
+## Safe use of a verified bound
+
+Early termination at a verified bound is permitted only when the bound record
+states an inclusive positive interval, identifies its external source and
+version/date, and is itself stored with enough provenance to be audited. The
+current exact value must fall inside that interval after a successfully checked
+transition.
+
+The result records the reached value, bound, source, and executed prefix. It
+must not report a total stopping time or full-trajectory peak unless the cited
+evidence also provides a trustworthy suffix with those exact metrics and the
+composition has been independently checked. Entering a verified interval is
+finite computational evidence, not a proof of the conjecture.
+
+## Reproduction and exceptional-result procedure
+
+A potentially record-setting, contradictory, or otherwise exceptional result
+is marked `needs-reproduction` in research metadata and processed in order:
+
+1. rerun the same configuration and compare the complete result record;
+2. run the checked reference engine wherever every observed value is
+   representable;
+3. run the arbitrary-precision engine over the complete relevant prefix;
+4. check with an independent script or external tool that does not reuse the
+   tested algorithm;
+5. preserve the complete configuration, program commit, toolchain, platform,
+   and relevant environment information;
+6. record SHA-256 hashes for configuration and large artifacts;
+7. perform a manual review of source provenance, step accounting, peak, and
+   termination semantics;
+8. only after agreement, change the label from candidate to reproduced within
+   the precisely declared population.
+
+Failure at any step yields `verification_failed` or remains
+`needs-reproduction`; disagreements are retained and investigated rather than
+overwritten.
+
+## Reproducible reporting
+
+Every result line points to an experiment ID, configuration ID, run ID, input
+ID, program commit, engine policy, status, validation state, and format version.
+Small text summaries may be versioned. Large values or trajectories remain
+outside Git and are represented by metadata plus SHA-256 as described in
+[`research/results/README.md`](../research/results/README.md).
+
+Timing comparisons require the same machine description, power mode, build
+profile, toolchain, workload, warm-up policy, and competing-load notes. See
+[`benchmarking.md`](benchmarking.md).
+
+## Methodology risks
+
+- selection bias from choosing notable numbers after seeing their trajectories;
+- multiple comparisons across many families and metrics;
+- control mismatch caused by parity or generator rejection rules;
+- dependence between members of a mathematical family;
+- censoring caused by unequal limits;
+- non-independent validation when both implementations share the same defect;
+- timing noise and machine-specific performance;
+- drift in external databases and verification bounds.
+
+The logbook records deviations, invalidated experiments, and analysis choices
+so these risks remain visible.

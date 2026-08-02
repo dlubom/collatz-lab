@@ -1,64 +1,44 @@
 # Architecture Decision Records
 
 This directory contains immutable records for significant Collatz Lab
-architecture decisions. The current baseline comes directly from the project
-brief and is expressed as current state in [`ARCHITECTURE.md`](../../ARCHITECTURE.md)
-and the Collatz engine Spec; no ADR has yet been accepted.
-
-Use the local ASDLC [`ADR Authoring`](../../.asdlc/practices/adr-authoring.md)
-practice. Create an ADR when a choice has meaningful alternatives, material
-trade-offs, and consequences for future work. Routine implementation details
-remain in the relevant Spec or PBI.
+architecture decisions. The foundational ADRs were accepted with the
+documentation baseline on 2026-08-02.
 
 ## Index
 
 | ADR | Status | Decision |
 |---|---|---|
-| _None yet_ | — | — |
+| [ADR-001](ADR-001-rust-as-implementation-language.md) | Accepted | Use Rust for the executable implementation |
+| [ADR-002](ADR-002-lean4-verification-boundary.md) | Accepted | Limit Lean 4 claims to the mathematical model and local obligations |
+| [ADR-003](ADR-003-arbitrary-precision-with-rug-and-gmp.md) | Accepted | Use `rug::Integer`/GMP and promote before overflow |
+| [ADR-004](ADR-004-no-simd-or-gpu-in-mvp.md) | Accepted | Keep the MVP scalar; defer SIMD and GPU |
 
-Likely decision triggers include the GMP build/linking strategy, the mechanism
-used to connect Lean4 evidence to Rust conformance tests, and any future change
-to the scalar Apple-Silicon-only execution model. These are triggers for
-analysis, not pre-decided ADRs.
+The sequence is intentional: implementation language precedes the formal
+boundary, which precedes the arbitrary-precision implementation, which precedes
+the execution-model exclusion.
 
-## Naming and lifecycle
+## Creating an ADR
 
-- Filename: `ADR-NNN-short-descriptive-title.md`
-- One decision per ADR.
-- Initial status: `Proposed`; use `Accepted` only after review.
-- Preserve accepted content. Replace a decision with a new ADR and mark the old
-  record `Superseded` with a link to its successor.
+Follow the local ASDLC
+[`ADR Authoring`](../../.asdlc/practices/adr-authoring.md) practice:
 
-## Template
+1. search this directory for a decision in the same domain;
+2. select the next sequential number;
+3. use `ADR-NNN-short-descriptive-title.md`;
+4. record context, an unambiguous decision, positive/negative/neutral
+   consequences, concrete alternatives, and reconsideration triggers;
+5. start at `Proposed` unless a human has explicitly accepted it.
 
-```markdown
-# ADR-NNN: Decision title
+Search examples:
 
-**Status:** Proposed
-**Date:** YYYY-MM-DD
-
-## Context
-
-What forces, constraints, and requirements make a decision necessary?
-
-## Decision
-
-We will ...
-
-## Consequences
-
-**Positive:**
-- ...
-
-**Negative:**
-- ...
-
-**Neutral:**
-- ...
-
-## Alternatives Considered
-
-### Alternative
-
-Specific rejection rationale.
+```bash
+rg -n "^# ADR-|^\*\*Status:\*\*|^## Decision" docs/adrs
+rg -n -i "rust|lean|gmp|simd|gpu" docs/adrs
 ```
+
+## Lifecycle
+
+Accepted ADR content is historical and is not rewritten. If a decision changes,
+create a new ADR, update the old status to `Superseded by ADR-NNN`, and preserve
+the original context. Routine definitions and implementation details belong in
+the mathematical authority, living Spec, or active PBI rather than in an ADR.

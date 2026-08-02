@@ -9,7 +9,7 @@
 
 ## Sources of truth
 
-Read these in order before changing engine behavior:
+Read these in order before changing observable behavior:
 
 1. [`specs/collatz-engine/spec.md`](specs/collatz-engine/spec.md) — feature
    state and acceptance contract.
@@ -19,6 +19,11 @@ Read these in order before changing engine behavior:
    direction.
 4. The active file under `tasks/` — the authorized delta.
 
+Experiment work also reads
+[`docs/experimental-methodology.md`](docs/experimental-methodology.md); quality
+work reads [`docs/quality-strategy.md`](docs/quality-strategy.md). Do not copy
+their permanent rules into a PBI.
+
 This repository uses lightweight, spec-anchored ASDLC. Keep behavior changes
 and their living spec changes together, following the
 [`Living Specs` practice](.asdlc/practices/living-specs.md). PBIs are pointers
@@ -27,16 +32,20 @@ to the current spec, not copies of it; follow
 
 ## Toolchain
 
-The commands below are the intended project entry points. They become
-available when [`PBI-001`](tasks/PBI-001-bootstrap.md) is implemented; until
-then, do not report them as passing.
+The commands below are intended project entry points. Lean becomes available in
+[`PBI-001`](tasks/PBI-001-formal-reference-model.md), Rust and core quality gates
+in [`PBI-002`](tasks/PBI-002-rust-reference-engine.md), and benchmark compilation
+in [`PBI-003`](tasks/PBI-003-arbitrary-precision-engine.md). Until the owning PBI
+is implemented, do not report its command as passing.
 
 | Intent | Command | Authority |
 |---|---|---|
 | Format | `cargo fmt --all -- --check` | Rust formatter configuration |
 | Static analysis | `cargo clippy --workspace --all-targets --all-features -- -D warnings` | Cargo workspace and Clippy |
-| Rust correctness | `cargo test --workspace --all-features` | Spec Contract and test suite |
-| Lean correctness | `cd proofs && lake build` | Pinned Lean toolchain and proof sources |
+| Rust correctness | `cargo test --workspace` | Spec Contract and test suite |
+| Lean correctness | `(cd lean && lake build)` | Pinned Lean toolchain and proof sources |
+| Core coverage | `cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90` | Mathematical-core threshold |
+| Reference mutation | `cargo mutants --file crates/collatz-engine/src/reference.rs` | Material-mutant review |
 | Benchmark build | `cargo bench --workspace --no-run` | Criterion benchmark targets |
 | Benchmarks | `cargo bench --workspace` | Criterion reports on Apple Silicon |
 
@@ -50,15 +59,17 @@ then, do not report them as passing.
   `rug::Integer` engine.
 - Run proof and correctness gates before interpreting benchmark results.
 - Add example, property-based, and cross-engine regression coverage for every
-  behavior change.
+  applicable behavior change.
 - Update the relevant spec in the same change when observable behavior changes.
+- Preserve number provenance, configuration identity, and complete-versus-prefix
+  metric labels in every experiment result.
 
 **ASK**
 
 - Before changing the Collatz map, stopping convention, step-count convention,
   or public result/error semantics.
 - Before adding dependencies beyond Rust, `rug`, the property-testing stack,
-  the benchmarking stack, and Lean4 tooling.
+  the coverage/mutation/benchmarking stack, and Lean4 tooling.
 - Before expanding the supported platform or execution model beyond scalar CPU
   execution on macOS Apple Silicon.
 
