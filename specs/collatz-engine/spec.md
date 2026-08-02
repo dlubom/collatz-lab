@@ -1,6 +1,6 @@
 # Feature: Collatz Lab MVP
 
-- **Status:** Accepted baseline; implementation pending
+- **Status:** Accepted baseline; Lean model and checked reference engine implemented
 - **ASDLC mode:** Lightweight, spec-anchored
 - **Scope:** Collatz execution, selected-number experiments, provenance, and
   reproducible MVP results
@@ -120,6 +120,12 @@ before applying another transition. Every execution has finite declared limits.
 Public result/error semantics are behavioral. Rust signatures may be refined
 idiomatically without changing these outcomes.
 
+The checked reference slice is implemented in
+[`crates/collatz-engine/src/reference.rs`](../../crates/collatz-engine/src/reference.rs),
+with public domain/result types in
+[`domain.rs`](../../crates/collatz-engine/src/domain.rs). BigInt, hybrid, and
+compressed execution remain pending under later PBIs.
+
 ### Input definitions
 
 The MVP recognizes:
@@ -194,12 +200,12 @@ software stack.
 ### Definition of Done
 
 - [ ] Single, list, and supported-generator inputs are accepted and validated.
-- [ ] The checked reference engine implements classical steps, finite limits,
+- [x] The checked reference engine implements classical steps, finite limits,
   counts, first descent, and peak semantics without wrapping.
 - [ ] BigInt and hybrid execution preserve the same semantics, and promotion
   occurs before overflow.
-- [ ] Fixed examples `1`, `2`, `3`, and `27` use independent expected values.
-- [ ] Lean builds with no `sorry`, principal theorems do not depend on
+- [x] Fixed examples `1`, `2`, `3`, and `27` use independent expected values.
+- [x] Lean builds with no `sorry`, principal theorems do not depend on
   `sorryAx`, and small examples match the mathematical authority.
 - [ ] Common-domain and promotion differential tests pass.
 - [ ] MVP generators reconstruct their declared values and provenance.
@@ -210,7 +216,9 @@ software stack.
   reproduction.
 - [ ] Exceptional results remain `needs-reproduction` until independently
   confirmed.
-- [ ] The Minimal Quality Gate passes with exact command evidence.
+- [x] The PBI-002 reference-engine portion of the Minimal Quality Gate passes
+  with exact command evidence in
+  [`tasks/PBI-002-rust-reference-engine.md`](../../tasks/PBI-002-rust-reference-engine.md).
 
 ### Regression guardrails
 
