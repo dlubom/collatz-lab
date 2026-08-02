@@ -2,12 +2,15 @@
 
 //! Correctness-first scalar engines and generators for the standard Collatz map.
 
+mod bigint;
 mod domain;
 mod generators;
 mod reference;
 
+pub use bigint::{bigint_step, run_bigint};
 pub use domain::{
-    ArithmeticOverflow, PositiveU128, PositiveU128Error, RunError, RunProgress, RunSummary,
+    ArithmeticOverflow, BigIntRunSummary, HybridRunSummary, HybridValue, PositiveInteger,
+    PositiveIntegerError, PositiveU128, PositiveU128Error, RunError, RunProgress, RunSummary,
     Termination,
 };
 pub use generators::{MersenneError, mersenne};
