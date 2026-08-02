@@ -5,6 +5,7 @@
 mod bigint;
 mod domain;
 mod generators;
+mod hybrid;
 mod reference;
 
 pub use bigint::{bigint_step, run_bigint};
@@ -14,6 +15,7 @@ pub use domain::{
     Termination,
 };
 pub use generators::{MersenneError, mersenne};
+pub use hybrid::run_hybrid;
 pub use reference::{run, step};
 
 #[cfg(test)]
