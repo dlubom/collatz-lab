@@ -9,5 +9,8 @@ publish = false
 [lib]
 path = "src/lib.rs"
 
+[dependencies]
+rug = { version = "=1.30.0", default-features = false, features = ["integer"] }
+
 [dev-dependencies]
 proptest = "1.7.0"
