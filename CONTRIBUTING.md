@@ -36,7 +36,8 @@ installer again after pulling a change to the tracked hooks.
 8. Review the PR against the Spec, mathematical authority, architecture,
    active PBI, tests, and ASDLC practices. Resolve actionable conversations
    and rerun checks on the resulting head.
-9. Merge only after human approval. Delete the topic branch after the merge.
+9. Merge only after human review and an explicit merge decision. Delete the
+   topic branch after the merge.
 
 A repository-changing task is complete only when its applicable gates pass and
 its intended changes have been committed, pushed, and exposed in a draft PR.
@@ -50,15 +51,15 @@ is pushed only when explicitly requested and must be labeled as such.
 | `.githooks/pre-commit` | Rejects commits made while `main` or `master` is checked out. |
 | `.githooks/pre-push` | Rejects any push whose destination is remote `main` or `master`, including `HEAD:main`. |
 | `Repository policy` workflow | Tests the tracked hook behavior on every PR and every update to `main`. |
-| GitHub `Protect main` rule | Once enforceable by the repository plan, requires a PR and passing checks, prevents force pushes and deletion, and applies without an administrator bypass. |
+| GitHub `Protect main` ruleset | Requires a PR, an up-to-date passing `Repository policy` check, resolved conversations, and linear history; prevents force pushes and deletion; and has no bypass entries. |
 
 Client-side hooks are an early safety net, not the security boundary: Git can
-skip a hook with `--no-verify`. Enforced GitHub branch protection is therefore
-the required authoritative boundary for the shared repository. If GitHub says
-that protection rules are not enforced for the repository's current visibility
-or plan, the workflow is only locally enforced and must not be described as
-fully protected. Bypassing either layer is not part of the normal delivery
-workflow.
+skip a hook with `--no-verify`. The active GitHub `Protect main` ruleset is the
+authoritative boundary for the shared repository. It requires zero approving
+reviews so that a sole owner is not deadlocked by GitHub's self-approval rules;
+review remains mandatory workflow policy, conversations must be resolved, and
+the merge remains a separate human decision. Bypassing either enforcement layer
+is not part of the normal delivery workflow.
 
 ## Review expectations
 
