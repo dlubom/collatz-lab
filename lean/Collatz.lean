@@ -1,0 +1,3 @@
+namespace Collatz
+
+end Collatz
