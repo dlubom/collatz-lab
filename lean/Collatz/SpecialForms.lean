@@ -1,5 +1,7 @@
 import Collatz.Accelerated
 import Collatz.Generators
+import Mathlib.Tactic.Positivity
+import Mathlib.Tactic.Ring
 
 namespace Collatz
 

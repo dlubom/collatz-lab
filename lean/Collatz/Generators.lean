@@ -1,4 +1,8 @@
 import Collatz.Basic
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
+import Mathlib.Algebra.Ring.GeomSum
+import Mathlib.Data.Finset.Range
+import Mathlib.Tactic.NormNum
 
 namespace Collatz
 

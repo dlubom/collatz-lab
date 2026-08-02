@@ -1,4 +1,7 @@
 import Collatz.Iteration
+import Mathlib.Data.Nat.MaxPowDiv
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.NormNum
 
 namespace Collatz
 
@@ -104,16 +107,31 @@ def accumulatedWeight : ℕ → ℕ → ℕ
   | 0, _ => 0
   | r + 1, n => compressedWeight n + accumulatedWeight r (compressedStep n)
 
-/-- Summed compressed weights are exactly the corresponding number of
-classical transitions. -/
-theorem compressed_accumulated_accounting {n : ℕ} (hn : 0 < n) (r : ℕ) :
+/-- Every checkpoint at which one of the first `r` compressed iterations starts
+is nonterminal. This is the valid-prefix condition for terminal-stopped
+compressed execution. -/
+def CompressedPrefixActive (n r : ℕ) : Prop :=
+  ∀ i < r, compressedIterate i n ≠ 1
+
+/-- Along a terminal-stopped compressed prefix, summed weights are exactly the
+corresponding number of classical transitions. -/
+theorem compressed_accumulated_accounting {n : ℕ} (hn : 0 < n) (r : ℕ)
+    (hactive : CompressedPrefixActive n r) :
     compressedIterate r n = iterate (accumulatedWeight r n) n := by
   induction r generalizing n with
   | zero => rfl
   | succ r ih =>
+      have hn_ne_one : n ≠ 1 := by
+        have hzero := hactive 0 (by omega)
+        simpa [compressedIterate] using hzero
+      have hn_nonterminal : 1 < n := by omega
+      have htail : CompressedPrefixActive (compressedStep n) r := by
+        intro i hi
+        have hnext := hactive (i + 1) (by omega)
+        simpa [compressedIterate] using hnext
       simp only [compressedIterate, accumulatedWeight]
-      rw [ih (compressedStep_pos hn)]
-      rw [compressed_checkpoint_eq_iterate_of_pos hn]
+      rw [ih (compressedStep_pos hn) htail]
+      rw [compressed_checkpoint_correspondence hn_nonterminal]
       rw [← iterate_add]
 
 theorem iterate_pow_two_mul_prefix {j k q : ℕ} (hj : j ≤ k) :

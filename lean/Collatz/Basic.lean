@@ -1,4 +1,5 @@
-import Mathlib
+import Mathlib.Data.Nat.Basic
+import Lean.Elab.Tactic.Omega
 
 namespace Collatz
 

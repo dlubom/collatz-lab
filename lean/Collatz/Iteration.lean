@@ -1,4 +1,7 @@
 import Collatz.Basic
+import Mathlib.Data.Finset.Lattice.Fold
+import Mathlib.Data.Finset.Range
+import Mathlib.Data.List.Range
 
 namespace Collatz
 
@@ -27,6 +30,21 @@ theorem iterate_pos {n : ℕ} (hn : 0 < n) (k : ℕ) : 0 < iterate k n := by
       rw [iterate_succ]
       exact ih (classicalStep_pos hn)
 
+/-- The literal classical values from index zero through `steps`. -/
+def trajectoryValues (start steps : ℕ) : List ℕ :=
+  (List.range (steps + 1)).map fun k => iterate k start
+
+@[simp]
+theorem trajectoryValues_length (start steps : ℕ) :
+    (trajectoryValues start steps).length = steps + 1 := by
+  simp [trajectoryValues]
+
+/-- A represented trajectory prefix through index `k` contains exactly `k`
+completed classical transitions. -/
+theorem classical_count_at_index (start k : ℕ) :
+    (trajectoryValues start k).length - 1 = k := by
+  simp
+
 /-- Reachability records the index, hence also the number of completed
 classical transitions. -/
 def ReachableAt (start value index : ℕ) : Prop := iterate index start = value
@@ -37,11 +55,6 @@ theorem reachableAt_succ {start value : ℕ} {index : ℕ}
     (h : ReachableAt (classicalStep start) value index) :
     ReachableAt start value (index + 1) := by
   exact h
-
-/-- The reviewed statement that the represented prefix through index `k`
-contains `k` completed classical transitions. -/
-theorem classical_count_at_index (k : ℕ) : (List.range (k + 1)).length - 1 = k := by
-  simp
 
 inductive ObservationStatus
   | reachedOne
@@ -110,10 +123,6 @@ theorem observe_reachedOne_last {n limit : ℕ}
       · simp [observe, hn]
       · simp only [observe, hn, ↓reduceIte] at h ⊢
         exact ih h
-
-/-- The literal classical values from index zero through `steps`. -/
-def trajectoryValues (start steps : ℕ) : List ℕ :=
-  (List.range (steps + 1)).map fun k => iterate k start
 
 /-- The maximum over the represented classical prefix. -/
 def trajectoryPeak (start steps : ℕ) : ℕ :=
