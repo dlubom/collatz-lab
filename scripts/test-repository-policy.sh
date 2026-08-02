@@ -27,10 +27,13 @@ chmod +x "$fixture/.githooks/pre-commit" "$fixture/.githooks/pre-push"
 )
 
 configured_path=$(git -C "$fixture" config --local --get core.hooksPath)
-if [ "$configured_path" != ".githooks" ]; then
-    echo "FAIL: installer did not select the tracked hook directory." >&2
+expected_path=$(CDPATH= cd -- "$fixture/.git/collatz-hooks" && pwd -P)
+if [ "$configured_path" != "$expected_path" ]; then
+    echo "FAIL: installer did not select the persistent runtime hook directory." >&2
     exit 1
 fi
+
+rm -rf "$fixture/.githooks"
 
 printf '%s\n' "blocked on main" >> "$fixture/tracked.txt"
 git -C "$fixture" add tracked.txt
@@ -47,7 +50,7 @@ zero_oid=0000000000000000000000000000000000000000
 
 if printf '%s %s %s %s\n' \
     refs/heads/codex/policy-test "$local_oid" refs/heads/main "$zero_oid" \
-    | (cd "$fixture" && .githooks/pre-push origin example.invalid) \
+    | "$configured_path/pre-push" origin example.invalid \
         >"$policy_tmp/pre-push-main.log" 2>&1; then
     echo "FAIL: pre-push allowed a direct update of remote main." >&2
     exit 1
@@ -56,7 +59,7 @@ fi
 if ! printf '%s %s %s %s\n' \
     refs/heads/codex/policy-test "$local_oid" \
     refs/heads/codex/policy-test "$zero_oid" \
-    | (cd "$fixture" && .githooks/pre-push origin example.invalid) \
+    | "$configured_path/pre-push" origin example.invalid \
         >"$policy_tmp/pre-push-topic.log" 2>&1; then
     echo "FAIL: pre-push rejected a topic branch." >&2
     exit 1

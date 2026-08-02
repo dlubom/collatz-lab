@@ -35,7 +35,7 @@ to the current spec, not copies of it; follow
 Every repository-changing task is delivered through a topic branch and pull
 request. Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the complete workflow
 and activate the tracked safeguards with `./scripts/install-git-hooks.sh` in
-each clone or worktree.
+each clone.
 
 - Start work from the current `origin/main` on a `codex/<description>` branch;
   use `codex/pbi-NNN-<description>` for an implementation PBI.

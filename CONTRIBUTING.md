@@ -12,8 +12,11 @@ Activate the versioned Git safeguards in every clone or worktree:
 ./scripts/install-git-hooks.sh
 ```
 
-The installer sets the checkout-local `core.hooksPath` to `.githooks`. It does
-not modify global Git configuration.
+The installer copies the tracked hooks into this clone's Git metadata and sets
+the repository-local `core.hooksPath` to that runtime copy. The guards therefore
+remain active while branches are switched, including before this workflow is
+present on `main`. It does not modify global Git configuration. Run the
+installer again after pulling a change to the tracked hooks.
 
 ## Delivery sequence
 
