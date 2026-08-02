@@ -47,12 +47,15 @@ is pushed only when explicitly requested and must be labeled as such.
 | `.githooks/pre-commit` | Rejects commits made while `main` or `master` is checked out. |
 | `.githooks/pre-push` | Rejects any push whose destination is remote `main` or `master`, including `HEAD:main`. |
 | `Repository policy` workflow | Tests the tracked hook behavior on every PR and every update to `main`. |
-| GitHub `Protect main` ruleset | Requires a PR and passing checks, prevents force pushes and deletion, and applies without an administrator bypass. |
+| GitHub `Protect main` rule | Once enforceable by the repository plan, requires a PR and passing checks, prevents force pushes and deletion, and applies without an administrator bypass. |
 
 Client-side hooks are an early safety net, not the security boundary: Git can
-skip a hook with `--no-verify`. The active GitHub ruleset is therefore the
-authoritative protection for the shared repository. Bypassing either layer is
-not part of the normal delivery workflow.
+skip a hook with `--no-verify`. Enforced GitHub branch protection is therefore
+the required authoritative boundary for the shared repository. If GitHub says
+that protection rules are not enforced for the repository's current visibility
+or plan, the workflow is only locally enforced and must not be described as
+fully protected. Bypassing either layer is not part of the normal delivery
+workflow.
 
 ## Review expectations
 
