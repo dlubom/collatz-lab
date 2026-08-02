@@ -43,6 +43,8 @@ Collatz record is claimed yet. Implementation has not started.
   provenance, statuses, and reproduction procedure.
 - [Architecture](ARCHITECTURE.md) — components and dependency direction.
 - [Quality strategy](docs/quality-strategy.md) — minimum MVP gates.
+- [Contribution workflow](CONTRIBUTING.md) — branch, verification, commit,
+  push, review, and merge policy.
 - [ADRs](docs/adrs/README.md) — proposed foundational decisions.
 - [PBIs](tasks/) — small implementation deltas; none has been executed.
 - [Research logbook](research/logbook.md) — chronological decisions and
