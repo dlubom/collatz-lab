@@ -7,4 +7,4 @@
 
 # Generated Rust build and mutation output
 /target/
-/mutants.out/
+/mutants.out*/

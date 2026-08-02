@@ -67,12 +67,36 @@ pub fn run(start: PositiveU128, classical_step_limit: u64) -> Result<RunSummary,
         completed_classical_steps += 1;
         current = next;
 
-        if current > observed_peak {
-            observed_peak = current;
-        }
-        if first_descent_step.is_none() && current < start {
+        observed_peak = observed_peak.max(current);
+        if is_unobserved_strict_descent(first_descent_step, start, current) {
             first_descent_step = Some(completed_classical_steps);
         }
+    }
+}
+
+fn is_unobserved_strict_descent(
+    first_descent_step: Option<u64>,
+    start: PositiveU128,
+    current: PositiveU128,
+) -> bool {
+    first_descent_step.is_none() && current < start
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn first_descent_requires_a_strict_drop_and_is_recorded_once() {
+        let start = PositiveU128(8);
+
+        assert!(!is_unobserved_strict_descent(None, start, start));
+        assert!(is_unobserved_strict_descent(None, start, PositiveU128(7)));
+        assert!(!is_unobserved_strict_descent(
+            Some(1),
+            start,
+            PositiveU128(4)
+        ));
     }
 }
 
