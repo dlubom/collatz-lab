@@ -1,3 +1,3 @@
-namespace Collatz
-
-end Collatz
+import Collatz.Basic
+import Collatz.Iteration
+import Collatz.Accelerated
