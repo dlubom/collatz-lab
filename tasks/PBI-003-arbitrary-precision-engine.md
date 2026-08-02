@@ -1,6 +1,6 @@
 # PBI-003: Add Arbitrary Precision and Safe Promotion
 
-- **Status:** Planned; blocked by PBI-002
+- **Status:** Implemented; ready for review
 - **Type:** Exact engine, hybrid execution, and differential verification
 
 ## Goal
@@ -17,7 +17,7 @@ reference or obscuring the promotion boundary.
 
 ## Dependencies
 
-- Blocked by: PBI-002 and accepted ADR-003.
+- Depends on: completed PBI-002 and accepted ADR-003.
 - Must merge before: PBI-004.
 
 ## Context pointers
@@ -89,21 +89,21 @@ such a change requires a regression test and living-Spec review.
 
 ## Acceptance criteria
 
-- [ ] The BigInt engine evaluates the same known trajectories and metrics as the
+- [x] The BigInt engine evaluates the same known trajectories and metrics as the
   reference engine.
-- [ ] Common-domain generated inputs agree on values, counts, peak, first
+- [x] Common-domain generated inputs agree on values, counts, peak, first
   descent, and termination.
-- [ ] The hybrid runner checks before overflow and promotes the current value,
+- [x] The hybrid runner checks before overflow and promotes the current value,
   not a wrapped result.
-- [ ] Promotion neither repeats nor omits a transition and occurs at most once.
-- [ ] `u128::MAX` produces the exact BigInt odd result under BigInt/hybrid and a
+- [x] Promotion neither repeats nor omits a transition and occurs at most once.
+- [x] `u128::MAX` produces the exact BigInt odd result under BigInt/hybrid and a
   typed overflow without a counted step under the reference engine.
-- [ ] Invalid zero input remains distinct from all finite run outcomes.
-- [ ] The BigInt engine never narrows intermediate values to `u128`.
-- [ ] Every integration defect leaves a regression test.
-- [ ] The mathematical core remains at or above 90% line coverage.
-- [ ] The reference mutation gate has no unexplained material survivor.
-- [ ] Criterion benchmarks compile on the supported Apple Silicon target and
+- [x] Invalid zero input remains distinct from all finite run outcomes.
+- [x] The BigInt engine never narrows intermediate values to `u128`.
+- [x] Every integration defect leaves a regression test.
+- [x] The mathematical core remains at or above 90% line coverage.
+- [x] The reference mutation gate has no unexplained material survivor.
+- [x] Criterion benchmarks compile on the supported Apple Silicon target and
   are not interpreted as correctness evidence.
 
 ## Deterministic verification commands
@@ -134,6 +134,57 @@ Expected results:
 - Criterion emits measurements for reference, BigInt, and promotion cases on
   the documented Apple Silicon host; no benchmark number is a completion
   threshold or correctness criterion.
+
+## Closure evidence
+
+Observed on 2026-08-02 from the PBI topic branch on macOS 26.6 / Apple M4,
+using Rust and Cargo 1.97.1, `rug` 1.30.0, `gmp-mpfr-sys` 1.7.1 with GMP 6.3.0,
+Criterion 0.8.2, `cargo-llvm-cov` 0.8.7, and `cargo-mutants` 27.1.0:
+
+- `cd lean && lake build` — exit `0`; all 1,049 Lean jobs completed.
+- `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`;
+  no formatting changes required.
+- `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets
+  --all-features -- -D warnings` — exit `0`; no warnings.
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 8
+  library unit tests, 6 BigInt integration tests, 4 differential tests, 4
+  reference property tests, and 17 reference integration tests passed; no
+  failures or ignored tests.
+- `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace
+  --all-features` — exit `0`; reported `99.34%` workspace line coverage
+  (`454/457` lines), with no global threshold applied.
+- `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine
+  --lib --all-features --fail-under-lines 90` — exit `0`; reported `98.47%`
+  line coverage (`450/457` lines) for the package/lib target.
+- `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file
+  crates/collatz-engine/src/reference.rs` — exit `0`; 15 mutants tested: 12
+  caught, 3 compile-unviable function-return replacements, and 0 missed.
+- `/Users/dariuszlubomski/.cargo/bin/cargo bench --workspace --no-run` — exit
+  `0`; the library and `engines` Criterion targets compiled in the optimized
+  bench profile.
+- `/Users/dariuszlubomski/.cargo/bin/cargo bench --workspace` — exit `0`; five
+  short declared reference, BigInt, hybrid, promotion, and special-form cases
+  emitted Criterion measurements. Context and intervals are recorded in
+  [`docs/benchmarking.md`](../docs/benchmarking.md) without treating timing as
+  correctness evidence.
+- `git diff --check` — exit `0`; no whitespace errors.
+
+The first package/lib coverage attempt exposed that the new modules were only
+reached through integration tests, while the threshold command runs library
+unit tests. Targeted unit regressions now exercise the same private branch and
+representation invariants, and the unchanged public integration tests retain
+independent end-to-end coverage.
+
+## Implementation refinements
+
+- `PositiveInteger` enforces the positive arbitrary-precision input domain and
+  exposes borrowed or owned `rug::Integer` values without narrowing.
+- BigInt summaries preserve exact start, last, and observed-peak values while
+  reusing the shared termination vocabulary and metric names.
+- Hybrid summaries retain the active `u128` or BigInt representation explicitly
+  and record a `u8` promotion count constrained by execution to zero or one.
+- Criterion 0.8.2 writes raw measurements below crate-local build directories;
+  those generated artifacts are ignored and remain outside version control.
 
 ## Risks
 

@@ -7,4 +7,5 @@
 
 # Generated Rust build and mutation output
 /target/
+/crates/*/target/
 /mutants.out*/
