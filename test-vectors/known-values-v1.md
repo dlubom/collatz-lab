@@ -13,9 +13,9 @@ and checked separately by the Lean theorems in
 | 3 | 7 | 16 |
 | 27 | 111 | 9232 |
 
-The Rust tests store these as literals. They do not call the engine to synthesize
-an expected sequence, count, peak, or first-descent time. The full trajectory
-for `27` is intentionally not copied into this file.
+The Rust tests store these as literals. They do not call the engine to
+synthesize an expected sequence, count, or peak. The full trajectory for `27`
+is intentionally not copied into this file.
 
 The initial generator oracle is `M_5 = 2^5 - 1 = 31`, checked by Lean theorem
 `vector_mersenne_five`.

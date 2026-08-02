@@ -1,8 +1,8 @@
 # Collatz Lab Architecture
 
-- **Status:** Accepted baseline; implementation pending
+- **Status:** Accepted baseline; PBI-001 and PBI-002 implemented
 - **Date:** 2026-08-02
-- **Phase:** Documentation only; production implementation has not started
+- **Phase:** Incremental MVP implementation
 
 ## Purpose and boundaries
 
@@ -47,7 +47,7 @@ Lean is a design-time verification component. It is not a runtime dependency.
 Benchmarking consumes only implementations that have passed the relevant proof
 and correctness gates.
 
-## Planned repository boundaries
+## Repository boundaries
 
 ```text
 crates/collatz-engine/       mathematical Rust contract, pure MVP generators,
@@ -63,10 +63,10 @@ docs/adrs/                   immutable architectural decision history
 research/                    logbook, experiment plan, and small result summaries
 ```
 
-These are planned ownership boundaries, not authorization to implement a PBI.
-PBI-001 establishes `lean/`; PBI-002 establishes the Rust workspace and
-reference engine; PBI-003 adds arbitrary precision and promotion; PBI-004 adds
-the first catalog-driven experiment flow.
+PBI-001 established `lean/`; PBI-002 established the Rust workspace and checked
+reference engine. The remaining directories describe accepted ownership, not
+authorization to implement later PBIs: PBI-003 adds arbitrary precision and
+promotion, while PBI-004 adds the first catalog-driven experiment flow.
 
 ## Mathematical and formal layer
 
@@ -145,6 +145,8 @@ specified mathematically.
 
 ### Checked `u128` reference engine
 
+- Implemented by `crates/collatz-engine/src/reference.rs`, with public domain
+  and result types in `crates/collatz-engine/src/domain.rs`.
 - Stores values as `u128` and uses checked arithmetic.
 - Reports overflow as data; it never wraps, saturates, or panics on domain
   arithmetic.

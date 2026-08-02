@@ -1,6 +1,6 @@
 # PBI-002: Implement the Checked Rust Reference Engine
 
-- **Status:** Planned; blocked by PBI-001
+- **Status:** Implemented; ready for review
 - **Type:** Rust mathematical core and constrained quality gate
 
 ## Goal
@@ -91,27 +91,27 @@ engine to synthesize expectations.
 
 ## Acceptance criteria
 
-- [ ] All production crate roots contain `#![forbid(unsafe_code)]`.
-- [ ] Zero is rejected before a transition and cannot be constructed as a valid
+- [x] All production crate roots contain `#![forbid(unsafe_code)]`.
+- [x] Zero is rejected before a transition and cannot be constructed as a valid
   domain input without a typed error.
-- [ ] The even and odd classical branch tests pass independently.
-- [ ] Inputs `1`, `2`, `3`, and `27` produce `0`, `1`, `7`, and `111` classical
+- [x] The even and odd classical branch tests pass independently.
+- [x] Inputs `1`, `2`, `3`, and `27` produce `0`, `1`, `7`, and `111` classical
   steps and peaks `1`, `2`, `16`, and `9232` respectively.
-- [ ] Start `1` terminates before limit checking; a nonterminal zero-limit run
+- [x] Start `1` terminates before limit checking; a nonterminal zero-limit run
   returns a zero-transition prefix.
-- [ ] The initial value participates in peak calculation.
-- [ ] An odd operation beyond the representable threshold reports overflow at
+- [x] The initial value participates in peak calculation.
+- [x] An odd operation beyond the representable threshold reports overflow at
   the current value, does not wrap, and does not increment the count.
-- [ ] The Mersenne generator maps exponent `5` to `31`.
-- [ ] Expected known results come from reviewed constants/Lean and not from the
+- [x] The Mersenne generator maps exponent `5` to `31`.
+- [x] Expected known results come from reviewed constants/Lean and not from the
   tested algorithm.
-- [ ] Rustfmt and Clippy with `-D warnings` pass.
-- [ ] The mathematical core reaches at least 90% line coverage through the
+- [x] Rustfmt and Clippy with `-D warnings` pass.
+- [x] The mathematical core reaches at least 90% line coverage through the
   deterministic package/lib command.
-- [ ] Workspace coverage is reported without a global threshold.
-- [ ] Every material reference-module mutant is killed or documented with an
+- [x] Workspace coverage is reported without a global threshold.
+- [x] Every material reference-module mutant is killed or documented with an
   accepted classification; test gaps are closed.
-- [ ] No BigInt, compression, CLI, or experiment functionality is introduced.
+- [x] No BigInt, compression, CLI, or experiment functionality is introduced.
 
 ## Deterministic verification commands
 
@@ -141,6 +141,38 @@ Expected results:
   misreporting the command as passing.
 - `git diff --check` reports no errors.
 
+## Closure evidence
+
+Observed on 2026-08-02 from the PBI topic branch, using Rust `1.97.1`,
+`cargo-llvm-cov 0.8.7`, and `cargo-mutants 27.1.0`:
+
+- `cd lean && lake build` — exit `0`; all 1,049 Lean jobs completed.
+- `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`;
+  no formatting changes required.
+- `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets
+  --all-features -- -D warnings` — exit `0`; no warnings.
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 5
+  library unit tests, 4 property tests, and 17 integration tests passed; no
+  failures or ignored tests.
+- `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace
+  --all-features` — exit `0`; reported `100.00%` workspace line coverage, with
+  no global threshold applied.
+- `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine
+  --lib --all-features --fail-under-lines 90` — exit `0`; reported `100.00%`
+  line coverage (`188/188` lines) for the package/lib target.
+- `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file
+  crates/collatz-engine/src/reference.rs` — exit `0`; 15 mutants tested: 12
+  caught, 3 compile-unviable function-return replacements, and 0 missed. The
+  unviable replacements require `Default` for deliberately non-defaultable
+  result types, so they are tool-classified build failures rather than material
+  survivors.
+- `git diff --check` — exit `0`; no whitespace errors.
+
+The first mutation pass exposed a strict-first-descent equality test gap and a
+semantically equivalent peak assignment. The final implementation adds a
+direct strict-boundary regression and uses `Ord::max`; the final mutation pass
+has no missed survivor.
+
 ## Risks
 
 - A public summary type could conflate overflow with experiment termination.
@@ -162,6 +194,12 @@ The reviewer manually traces starts `1`, `3`, and an overflow-risk odd value;
 checks runner state ordering and error data; verifies test-oracle provenance;
 inspects uncovered lines and mutation survivors; and confirms no wrapping or
 unsafe escape is possible in project code.
+
+The 2026-08-02 read-only implementation review found no critical issue and
+confirmed the map, runner ordering, typed overflow/progress, Mersenne boundary,
+independent vectors, coverage repair, and final mutation classification. Its
+single important finding was stale lifecycle state in the Spec, Architecture,
+and PBI; those documents are aligned in this closure change.
 
 ## Logical commit boundaries
 

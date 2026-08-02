@@ -19,7 +19,7 @@ counterexample in a tested set is not a proof, and every exceptional result
 must be reproduced through an independent computation before it is treated as
 credible.
 
-The planned MVP uses:
+The MVP uses:
 
 - Rust for a checked `u128` reference engine and a `rug::Integer`/GMP
   arbitrary-precision engine;
@@ -27,9 +27,10 @@ The planned MVP uses:
 - JSONL or an equivalent line-oriented result format for reproducible analysis;
 - scalar CPU execution on macOS Apple Silicon.
 
-The accepted project baseline is currently in the documentation and design
-phase. No Rust engine, Lean project, benchmark result, experiment result, or
-Collatz record is claimed yet. Implementation has not started.
+The accepted project baseline now includes the Lean 4 reference model and the
+checked scalar `u128` Rust reference engine. Arbitrary precision, hybrid
+promotion, the CLI, experiment records, benchmarks, and research results remain
+pending; no Collatz record is claimed.
 
 ## Documentation map
 
@@ -46,6 +47,6 @@ Collatz record is claimed yet. Implementation has not started.
 - [Contribution workflow](CONTRIBUTING.md) — branch, verification, commit,
   push, review, and merge policy.
 - [ADRs](docs/adrs/README.md) — proposed foundational decisions.
-- [PBIs](tasks/) — small implementation deltas; none has been executed.
+- [PBIs](tasks/) — small implementation deltas and their closure evidence.
 - [Research logbook](research/logbook.md) — chronological decisions and
   observations once research begins.
