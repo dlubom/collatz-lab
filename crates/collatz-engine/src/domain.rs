@@ -70,6 +70,8 @@ pub struct RunSummary {
     pub last: PositiveU128,
     /// Number of successfully completed classical transitions.
     pub completed_classical_steps: u64,
+    /// Configured maximum number of classical transitions.
+    pub classical_step_limit: u64,
     /// Maximum over the represented classical prefix, including `start`.
     pub observed_peak: PositiveU128,
     /// First completed-step index whose value is below `start`, when observed.
@@ -87,6 +89,8 @@ pub struct RunProgress {
     pub last: PositiveU128,
     /// Number of successfully completed classical transitions.
     pub completed_classical_steps: u64,
+    /// Configured maximum number of classical transitions.
+    pub classical_step_limit: u64,
     /// Maximum over the represented classical prefix, including `start`.
     pub observed_peak: PositiveU128,
     /// First completed-step index whose value is below `start`, when observed.

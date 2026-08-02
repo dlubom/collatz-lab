@@ -40,6 +40,7 @@ fn fixed_known_values_match_the_independent_oracles() {
         assert_eq!(summary.start, positive(start));
         assert_eq!(summary.last, positive(1));
         assert_eq!(summary.completed_classical_steps, expected_steps);
+        assert_eq!(summary.classical_step_limit, expected_steps);
         assert_eq!(summary.observed_peak, positive(expected_peak));
         assert_eq!(summary.termination, Termination::ReachedOne);
     }
@@ -52,6 +53,7 @@ fn terminal_one_has_priority_over_a_zero_limit() {
     assert_eq!(summary.start, positive(1));
     assert_eq!(summary.last, positive(1));
     assert_eq!(summary.completed_classical_steps, 0);
+    assert_eq!(summary.classical_step_limit, 0);
     assert_eq!(summary.observed_peak, positive(1));
     assert_eq!(summary.first_descent_step, None);
     assert_eq!(summary.termination, Termination::ReachedOne);
@@ -64,6 +66,7 @@ fn nonterminal_zero_limit_is_a_zero_transition_prefix() {
     assert_eq!(summary.start, positive(2));
     assert_eq!(summary.last, positive(2));
     assert_eq!(summary.completed_classical_steps, 0);
+    assert_eq!(summary.classical_step_limit, 0);
     assert_eq!(summary.observed_peak, positive(2));
     assert_eq!(summary.first_descent_step, None);
     assert_eq!(summary.termination, Termination::StepLimitReached);
@@ -123,6 +126,7 @@ fn runner_overflow_does_not_count_or_invent_a_transition() {
     assert_eq!(error.progress.start, overflow_risk);
     assert_eq!(error.progress.last, overflow_risk);
     assert_eq!(error.progress.completed_classical_steps, 0);
+    assert_eq!(error.progress.classical_step_limit, 1);
     assert_eq!(error.progress.observed_peak, overflow_risk);
     assert_eq!(error.progress.first_descent_step, None);
 }
@@ -137,6 +141,7 @@ fn runner_preserves_progress_before_a_later_overflow() {
     assert_eq!(error.progress.start, start);
     assert_eq!(error.progress.last, positive(overflow_risk));
     assert_eq!(error.progress.completed_classical_steps, 1);
+    assert_eq!(error.progress.classical_step_limit, 2);
     assert_eq!(error.progress.observed_peak, start);
     assert_eq!(error.progress.first_descent_step, Some(1));
 }

@@ -36,6 +36,7 @@ pub fn run(start: PositiveU128, classical_step_limit: u64) -> Result<RunSummary,
                 start,
                 current,
                 completed_classical_steps,
+                classical_step_limit,
                 observed_peak,
                 first_descent_step,
                 Termination::ReachedOne,
@@ -47,6 +48,7 @@ pub fn run(start: PositiveU128, classical_step_limit: u64) -> Result<RunSummary,
                 start,
                 current,
                 completed_classical_steps,
+                classical_step_limit,
                 observed_peak,
                 first_descent_step,
                 Termination::StepLimitReached,
@@ -59,6 +61,7 @@ pub fn run(start: PositiveU128, classical_step_limit: u64) -> Result<RunSummary,
                 start,
                 last: current,
                 completed_classical_steps,
+                classical_step_limit,
                 observed_peak,
                 first_descent_step,
             },
@@ -82,6 +85,26 @@ fn is_unobserved_strict_descent(
     first_descent_step.is_none() && current < start
 }
 
+fn summary(
+    start: PositiveU128,
+    last: PositiveU128,
+    completed_classical_steps: u64,
+    classical_step_limit: u64,
+    observed_peak: PositiveU128,
+    first_descent_step: Option<u64>,
+    termination: Termination,
+) -> RunSummary {
+    RunSummary {
+        start,
+        last,
+        completed_classical_steps,
+        classical_step_limit,
+        observed_peak,
+        first_descent_step,
+        termination,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,23 +120,5 @@ mod tests {
             start,
             PositiveU128(4)
         ));
-    }
-}
-
-fn summary(
-    start: PositiveU128,
-    last: PositiveU128,
-    completed_classical_steps: u64,
-    observed_peak: PositiveU128,
-    first_descent_step: Option<u64>,
-    termination: Termination,
-) -> RunSummary {
-    RunSummary {
-        start,
-        last,
-        completed_classical_steps,
-        observed_peak,
-        first_descent_step,
-        termination,
     }
 }

@@ -17,6 +17,7 @@ fn expected_prefix(start: PositiveU128, limit: u64) -> Result<RunSummary, RunErr
                 start,
                 last: current,
                 completed_classical_steps,
+                classical_step_limit: limit,
                 observed_peak,
                 first_descent_step,
                 termination: Termination::ReachedOne,
@@ -28,6 +29,7 @@ fn expected_prefix(start: PositiveU128, limit: u64) -> Result<RunSummary, RunErr
                 start,
                 last: current,
                 completed_classical_steps,
+                classical_step_limit: limit,
                 observed_peak,
                 first_descent_step,
                 termination: Termination::StepLimitReached,
@@ -43,6 +45,7 @@ fn expected_prefix(start: PositiveU128, limit: u64) -> Result<RunSummary, RunErr
                         start,
                         last: current,
                         completed_classical_steps,
+                        classical_step_limit: limit,
                         observed_peak,
                         first_descent_step,
                     },
@@ -100,6 +103,7 @@ proptest! {
         let summary = run(start, limit).expect("small generated prefixes stay in u128");
 
         prop_assert!(summary.completed_classical_steps <= limit);
+        prop_assert_eq!(summary.classical_step_limit, limit);
         prop_assert!(summary.observed_peak >= start);
         prop_assert!(summary.observed_peak >= summary.last);
         if let Some(first_descent_step) = summary.first_descent_step {

@@ -52,6 +52,7 @@ mod tests {
         let terminal = run(positive(1), 0).expect("one is terminal before the limit check");
         assert_eq!(terminal.termination, Termination::ReachedOne);
         assert_eq!(terminal.completed_classical_steps, 0);
+        assert_eq!(terminal.classical_step_limit, 0);
 
         let limited = run(positive(8), 1).expect("one even transition is representable");
         assert_eq!(limited.last, positive(4));
@@ -61,6 +62,7 @@ mod tests {
 
         let overflow = run(positive(u128::MAX / 3), 1).expect_err("first transition overflows");
         assert_eq!(overflow.progress.completed_classical_steps, 0);
+        assert_eq!(overflow.progress.classical_step_limit, 1);
         assert_eq!(overflow.progress.last, positive(u128::MAX / 3));
         assert!(
             overflow
