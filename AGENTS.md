@@ -30,6 +30,22 @@ and their living spec changes together, following the
 to the current spec, not copies of it; follow
 [`PBI Authoring`](.asdlc/practices/pbi-authoring.md).
 
+## Delivery workflow
+
+Every repository-changing task is delivered through a topic branch and pull
+request. Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the complete workflow
+and activate the tracked safeguards with `./scripts/install-git-hooks.sh` in
+each clone or worktree.
+
+- Start work from the current `origin/main` on a `codex/<description>` branch;
+  use `codex/pbi-NNN-<description>` for an implementation PBI.
+- Treat applicable verification, an intentional commit, push, and draft pull
+  request as part of task completion.
+- Keep merge as a separate human-reviewed action. Never merge merely because
+  implementation and checks completed.
+- If a required gate fails, report the exact blocker and do not represent the
+  task as complete. Push an incomplete checkpoint only when explicitly asked.
+
 ## Toolchain
 
 The commands below are intended project entry points. Lean becomes available in
@@ -53,6 +69,8 @@ is implemented, do not report its command as passing.
 
 **ALWAYS**
 
+- Work on a topic branch and finish repository-changing tasks with an
+  intentional commit, push, and draft pull request.
 - Define or refine mathematical semantics and Lean4 obligations before
   optimizing an engine.
 - Use checked arithmetic in the `u128` engine and exact arithmetic in the
@@ -75,6 +93,9 @@ is implemented, do not report its command as passing.
 
 **NEVER**
 
+- Commit or push directly to `main`, bypass repository hooks with
+  `--no-verify`, force-push, or merge a pull request without explicit human
+  direction.
 - Treat finite computation as a proof of the Collatz conjecture.
 - Hide arithmetic overflow, step-limit exhaustion, or invalid zero input.
 - Accept a performance optimization that changes mathematical results or step

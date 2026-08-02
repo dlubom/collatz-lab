@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -eu
+
+branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+
+case "$branch" in
+    main|master)
+        echo "Blocked: commits to '$branch' are not allowed." >&2
+        echo "Create a topic branch and deliver the change through a pull request." >&2
+        exit 1
+        ;;
+esac
