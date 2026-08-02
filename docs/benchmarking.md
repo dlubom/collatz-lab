@@ -43,7 +43,7 @@ Full measurement uses `cargo bench --workspace` only after correctness gates.
 
 ## PBI-003 local smoke measurement
 
-The first short measurement ran on 2026-08-02 from commit `f7a207f` with a
+The first short measurement ran on 2026-08-02 from commit `a164723` with a
 clean tracked worktree before Criterion wrote ignored raw artifacts. This is
 build and harness evidence, not a performance conclusion or comparison
 baseline.
@@ -66,11 +66,13 @@ Observed Criterion estimate intervals:
 
 | Case | Input and limit | Estimate interval |
 |---|---|---:|
-| Reference | `27`, 111 classical transitions | 106.53–107.24 ns |
-| BigInt | `27`, 111 classical transitions | 4.2869–4.3512 us |
-| Hybrid, no promotion | `27`, 111 classical transitions | 680.76–736.79 ns |
-| Hybrid promotion | `u128::MAX`, 1 classical transition | 119.15–150.89 ns |
-| BigInt special form | `2^256 - 1`, 64 classical transitions | 3.0134–3.3221 us |
+| Reference even step | `6 -> 3` | 1.2113–1.2217 ns |
+| Reference odd step | `3 -> 10` | 1.4221–1.4322 ns |
+| Reference | `27`, 111 classical transitions | 106.57–106.99 ns |
+| BigInt | `27`, 111 classical transitions | 4.3984–4.4594 us |
+| Hybrid, no promotion | `27`, 111 classical transitions | 679.75–685.03 ns |
+| Hybrid promotion | `u128::MAX`, 1 classical transition | 124.45–125.44 ns |
+| BigInt special form | `2^256 - 1`, 64 classical transitions | 3.1396–3.2022 us |
 
 Raw Criterion output remains under ignored build directories and is not
 versioned as research evidence.

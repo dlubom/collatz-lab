@@ -147,7 +147,7 @@ Criterion 0.8.2, `cargo-llvm-cov` 0.8.7, and `cargo-mutants` 27.1.0:
 - `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets
   --all-features -- -D warnings` — exit `0`; no warnings.
 - `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 8
-  library unit tests, 6 BigInt integration tests, 4 differential tests, 4
+  library unit tests, 6 BigInt integration tests, 5 differential tests, 4
   reference property tests, and 17 reference integration tests passed; no
   failures or ignored tests.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace
@@ -162,11 +162,11 @@ Criterion 0.8.2, `cargo-llvm-cov` 0.8.7, and `cargo-mutants` 27.1.0:
 - `/Users/dariuszlubomski/.cargo/bin/cargo bench --workspace --no-run` — exit
   `0`; the library and `engines` Criterion targets compiled in the optimized
   bench profile.
-- `/Users/dariuszlubomski/.cargo/bin/cargo bench --workspace` — exit `0`; five
-  short declared reference, BigInt, hybrid, promotion, and special-form cases
-  emitted Criterion measurements. Context and intervals are recorded in
-  [`docs/benchmarking.md`](../docs/benchmarking.md) without treating timing as
-  correctness evidence.
+- `/Users/dariuszlubomski/.cargo/bin/cargo bench --workspace` — exit `0`; seven
+  short declared branch-step, reference, BigInt, hybrid, promotion, and
+  special-form cases emitted Criterion measurements. Context and intervals are
+  recorded in [`docs/benchmarking.md`](../docs/benchmarking.md) without treating
+  timing as correctness evidence.
 - `git diff --check` — exit `0`; no whitespace errors.
 
 The first package/lib coverage attempt exposed that the new modules were only
@@ -174,6 +174,17 @@ reached through integration tests, while the threshold command runs library
 unit tests. Targeted unit regressions now exercise the same private branch and
 representation invariants, and the unchanged public integration tests retain
 independent end-to-end coverage.
+
+Independent review found no critical implementation issue. It identified one
+important evidence gap for suffixes after promotion and one minor omission in
+the baseline benchmark suite. The differential suite now compares every prefix
+limit from 1 through 32 after `u128::MAX` promotion against BigInt-from-start,
+including last value, peak, first descent, counts, limit, termination, active
+representation, and promotion count. The benchmark harness now also isolates
+the reference even and odd branches with setup outside the timed region.
+A follow-up review confirmed those code and test fixes and identified only the
+now-refreshed test counts, benchmark-case counts, and final measurement context
+as stale closure evidence.
 
 ## Implementation refinements
 
