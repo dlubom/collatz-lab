@@ -1,6 +1,6 @@
 # Feature: Collatz Lab MVP
 
-- **Status:** Accepted baseline; Lean model and checked reference engine implemented
+- **Status:** Accepted baseline; Lean model and scalar Rust engines implemented
 - **ASDLC mode:** Lightweight, spec-anchored
 - **Scope:** Collatz execution, selected-number experiments, provenance, and
   reproducible MVP results
@@ -120,11 +120,13 @@ before applying another transition. Every execution has finite declared limits.
 Public result/error semantics are behavioral. Rust signatures may be refined
 idiomatically without changing these outcomes.
 
-The checked reference slice is implemented in
-[`crates/collatz-engine/src/reference.rs`](../../crates/collatz-engine/src/reference.rs),
-with public domain/result types in
-[`domain.rs`](../../crates/collatz-engine/src/domain.rs). BigInt, hybrid, and
-compressed execution remain pending under later PBIs.
+The checked reference, exact BigInt, and hybrid slices are implemented in
+[`reference.rs`](../../crates/collatz-engine/src/reference.rs),
+[`bigint.rs`](../../crates/collatz-engine/src/bigint.rs), and
+[`hybrid.rs`](../../crates/collatz-engine/src/hybrid.rs), with public
+domain/result types in
+[`domain.rs`](../../crates/collatz-engine/src/domain.rs). Compressed execution
+remains pending under a later PBI.
 
 ### Input definitions
 
@@ -202,12 +204,12 @@ software stack.
 - [ ] Single, list, and supported-generator inputs are accepted and validated.
 - [x] The checked reference engine implements classical steps, finite limits,
   counts, first descent, and peak semantics without wrapping.
-- [ ] BigInt and hybrid execution preserve the same semantics, and promotion
+- [x] BigInt and hybrid execution preserve the same semantics, and promotion
   occurs before overflow.
 - [x] Fixed examples `1`, `2`, `3`, and `27` use independent expected values.
 - [x] Lean builds with no `sorry`, principal theorems do not depend on
   `sorryAx`, and small examples match the mathematical authority.
-- [ ] Common-domain and promotion differential tests pass.
+- [x] Common-domain and promotion differential tests pass.
 - [ ] MVP generators reconstruct their declared values and provenance.
 - [ ] Deterministic matched controls can be regenerated from configuration.
 - [ ] A stopped experiment reports its exact status and never presents a prefix
@@ -216,9 +218,10 @@ software stack.
   reproduction.
 - [ ] Exceptional results remain `needs-reproduction` until independently
   confirmed.
-- [x] The PBI-002 reference-engine portion of the Minimal Quality Gate passes
-  with exact command evidence in
-  [`tasks/PBI-002-rust-reference-engine.md`](../../tasks/PBI-002-rust-reference-engine.md).
+- [x] The implemented engine portion of the Minimal Quality Gate passes with
+  exact command evidence in
+  [`PBI-002`](../../tasks/PBI-002-rust-reference-engine.md) and
+  [`PBI-003`](../../tasks/PBI-003-arbitrary-precision-engine.md).
 
 ### Regression guardrails
 

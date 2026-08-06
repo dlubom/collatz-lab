@@ -2,15 +2,20 @@
 
 //! Correctness-first scalar engines and generators for the standard Collatz map.
 
+mod bigint;
 mod domain;
 mod generators;
+mod hybrid;
 mod reference;
 
+pub use bigint::{bigint_step, run_bigint};
 pub use domain::{
-    ArithmeticOverflow, PositiveU128, PositiveU128Error, RunError, RunProgress, RunSummary,
+    ArithmeticOverflow, BigIntRunSummary, HybridRunSummary, HybridValue, PositiveInteger,
+    PositiveIntegerError, PositiveU128, PositiveU128Error, RunError, RunProgress, RunSummary,
     Termination,
 };
 pub use generators::{MersenneError, mersenne};
+pub use hybrid::run_hybrid;
 pub use reference::{run, step};
 
 #[cfg(test)]
@@ -32,6 +37,27 @@ mod tests {
             PositiveU128Error::Zero.to_string(),
             "Collatz input must be positive"
         );
+
+        assert_eq!(
+            PositiveInteger::new(rug::Integer::from(0)),
+            Err(PositiveIntegerError::Zero)
+        );
+        assert_eq!(
+            PositiveInteger::new(rug::Integer::from(-1)),
+            Err(PositiveIntegerError::Negative)
+        );
+        assert_eq!(
+            PositiveIntegerError::Zero.to_string(),
+            "Collatz input must be positive, not zero"
+        );
+        assert_eq!(
+            PositiveIntegerError::Negative.to_string(),
+            "Collatz input must be positive, not negative"
+        );
+
+        let exact = PositiveInteger::from(positive(u128::MAX));
+        assert_eq!(exact.get(), &rug::Integer::from(u128::MAX));
+        assert_eq!(rug::Integer::from(exact), rug::Integer::from(u128::MAX));
     }
 
     #[test]

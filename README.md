@@ -27,10 +27,10 @@ The MVP uses:
 - JSONL or an equivalent line-oriented result format for reproducible analysis;
 - scalar CPU execution on macOS Apple Silicon.
 
-The accepted project baseline now includes the Lean 4 reference model and the
-checked scalar `u128` Rust reference engine. Arbitrary precision, hybrid
-promotion, the CLI, experiment records, benchmarks, and research results remain
-pending; no Collatz record is claimed.
+The accepted project baseline now includes the Lean 4 reference model, checked
+scalar `u128` execution, exact `rug::Integer` execution, safe one-way hybrid
+promotion, and a scalar Criterion baseline harness. The CLI, experiment records,
+and research results remain pending; no Collatz record is claimed.
 
 ## Documentation map
 

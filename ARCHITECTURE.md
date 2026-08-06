@@ -1,6 +1,6 @@
 # Collatz Lab Architecture
 
-- **Status:** Accepted baseline; PBI-001 and PBI-002 implemented
+- **Status:** Accepted baseline; PBI-001 through PBI-003 implemented
 - **Date:** 2026-08-02
 - **Phase:** Incremental MVP implementation
 
@@ -64,9 +64,10 @@ research/                    logbook, experiment plan, and small result summarie
 ```
 
 PBI-001 established `lean/`; PBI-002 established the Rust workspace and checked
-reference engine. The remaining directories describe accepted ownership, not
-authorization to implement later PBIs: PBI-003 adds arbitrary precision and
-promotion, while PBI-004 adds the first catalog-driven experiment flow.
+reference engine; PBI-003 added exact arithmetic, hybrid promotion, and scalar
+benchmarks. The remaining directories describe accepted ownership, not
+authorization to implement later PBIs; PBI-004 adds the first catalog-driven
+experiment flow.
 
 ## Mathematical and formal layer
 
@@ -155,6 +156,8 @@ specified mathematically.
 
 ### Arbitrary-precision engine
 
+- Implemented by `crates/collatz-engine/src/bigint.rs`, using the shared public
+  types in `crates/collatz-engine/src/domain.rs`.
 - Stores engine values as `rug::Integer` for the complete execution.
 - Uses exact arithmetic and the same stopping and accounting rules.
 - Has no arithmetic-overflow result, while finite operational limits remain.
@@ -162,6 +165,8 @@ specified mathematically.
 
 ### Hybrid runner
 
+- Implemented by `crates/collatz-engine/src/hybrid.rs`; its public result keeps
+  the active bounded-or-BigInt representation explicit.
 - Starts in `u128` only when the input is representable.
 - Checks the next odd operation before executing it.
 - Promotes the current value to `rug::Integer` before overflow, then continues
