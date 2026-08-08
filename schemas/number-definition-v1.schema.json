@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dlubom/collatz-lab/schemas/number-definition-v1.schema.json",
+  "title": "Collatz Lab number definition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "input_id",
+    "name",
+    "family",
+    "construction",
+    "provenance",
+    "declared_bit_length",
+    "declared_decimal_digits"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "input_id": { "$ref": "#/$defs/identifier" },
+    "name": { "type": "string", "minLength": 1 },
+    "family": { "$ref": "#/$defs/identifier" },
+    "construction": { "$ref": "#/$defs/construction" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "declared_bit_length": { "type": "integer", "minimum": 1 },
+    "declared_decimal_digits": { "type": "integer", "minimum": 1 }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "positiveDecimal": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "construction": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "literal" },
+            "value": { "$ref": "#/$defs/positiveDecimal" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "exponent"],
+          "properties": {
+            "kind": { "const": "mersenne" },
+            "exponent": { "type": "integer", "minimum": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "index"],
+          "properties": {
+            "kind": { "const": "fermat" },
+            "index": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "base", "length"],
+          "properties": {
+            "kind": { "const": "repunit" },
+            "base": { "type": "integer", "minimum": 2 },
+            "length": { "type": "integer", "minimum": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "coefficient", "exponent"],
+          "properties": {
+            "kind": { "const": "affine_power_of_two" },
+            "coefficient": { "$ref": "#/$defs/positiveDecimal" },
+            "exponent": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "source",
+        "external_id",
+        "retrieval_date",
+        "imported_value_sha256",
+        "reconstruction_note"
+      ],
+      "properties": {
+        "origin": { "enum": ["generated", "imported"] },
+        "source": { "type": "string", "minLength": 1 },
+        "external_id": { "type": ["string", "null"] },
+        "retrieval_date": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+          ]
+        },
+        "imported_value_sha256": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        },
+        "reconstruction_note": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
