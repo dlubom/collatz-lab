@@ -70,7 +70,7 @@ the versioned result format rather than expanding the logbook.
 
 - Validated exactly ten catalog records and zero invalid records.
 - Materialized EXP-002 twice; both 27-input plans were byte-identical with
-  SHA-256 `bdfa0b95b327c7960cc53c3aa79ec25fe98d0c21afff26d455bb3e7d8621522b`.
+  SHA-256 `ca3f63790035706d5f3b25771d2f7d0a279e5a4b493ce0927f25ff4293e6edd1`.
 - Reconstructed every generator family, independently pinned the first control
   value, checked bit-length/equality/duplicate rules, compared reference,
   BigInt, and hybrid results, and verified complete-versus-prefix labels.
@@ -78,18 +78,18 @@ the versioned result format rather than expanding the logbook.
 ### Results
 
 - EXP-001 configuration
-  `60f4e334f1435e58aca4e7ffb36cfe5baefaa5bff8c1e3c58583d84b81dd2afc`,
+  `86297883123deb36e3a295f79b8d895ce5338512d09ed9017a1622c0b2295a34`,
   run
-  `run-db2c2fb14ffa3c8c2cc38fc3656991be2362c9c5ea89559e4037ae2f41d6bb7a`:
+  `run-4f28a2fb16e4bf4b7a0bed5481001cf5326c9904bac5e52bc3ad6acb41a2fc54`:
   four `reached_one` records reproduced the fixed counts and peaks.
 - EXP-002 configuration
-  `34dc3a0415bad44c76c1598c70a9a18d4a46e6333511daa4c9acfebebe8d4b6e`,
+  `4bb88941efdbdb3e52acff0f09cae270fa7ab2c06c68cb519de7a44c9cbc0a33`,
   run
-  `run-54a72cf1bb87e7fcc64841d7a624686b8f157039327fe1c3df3ed4b0953f4f73`:
+  `run-452b78372f0ff87fc4ae848adae432bece93c2a222e52a59c54f5723561336c7`:
   27 `reached_one` records were written for three Mersenne values and 24
   matched controls.
 - Program commit for both configurations was
-  `eaf06d2b43fc7cc1ab2d86c6d0063619a2a304b1`.
+  `8c629f901b2aed607e68533e6eb9f327931ba6c5`.
 - No candidate threshold was declared and no observation was classified as
   exceptional. The smoke comparison supports no record, global, causal, or
   significance claim.

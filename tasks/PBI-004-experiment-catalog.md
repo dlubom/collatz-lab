@@ -218,10 +218,10 @@ the repository root unless a different working directory is stated.
 - `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets --all-features -- -D warnings`
   — exit `0`; no warnings.
-- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 57
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 60
   tests passed.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace --all-features`
-  — exit `0`; informational workspace line coverage `73.90%`.
+  — exit `0`; informational workspace line coverage `75.61%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90`
   — exit `0`; core line coverage `98.47%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file crates/collatz-engine/src/reference.rs`
@@ -230,8 +230,9 @@ the repository root unless a different working directory is stated.
   — exit `0`; exactly 10 version-1 records and zero invalid records.
 - Two `experiment plan` commands for EXP-002 followed by `cmp` — all exit `0`;
   27 inputs, configuration ID
-  `34dc3a0415bad44c76c1598c70a9a18d4a46e6333511daa4c9acfebebe8d4b6e`,
-  and byte-identical plans.
+  `4bb88941efdbdb3e52acff0f09cae270fa7ab2c06c68cb519de7a44c9cbc0a33`,
+  and byte-identical plans with SHA-256
+  `ca3f63790035706d5f3b25771d2f7d0a279e5a4b493ce0927f25ff4293e6edd1`.
 - `experiment run` for EXP-001 — exit `0`; four results reproduce steps
   `0/1/7/111` and peaks `1/2/16/9232`.
 - `experiment run` for EXP-002 — exit `0`; 27 uniquely identified results,
