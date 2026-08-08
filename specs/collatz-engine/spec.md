@@ -1,6 +1,6 @@
 # Feature: Collatz Lab MVP
 
-- **Status:** Accepted baseline; Lean model and scalar Rust engines implemented
+- **Status:** Accepted baseline; Lean model, scalar engines, and experiment slice implemented
 - **ASDLC mode:** Lightweight, spec-anchored
 - **Scope:** Collatz execution, selected-number experiments, provenance, and
   reproducible MVP results
@@ -156,6 +156,13 @@ The default comparison control matches each special input's bit length and uses
 a comparable declared sample size. Algorithm, version, seed, mapping, and
 rejection rules are stored so controls can be regenerated exactly.
 
+Version 1 pins `ChaCha20` from `rand_chacha 0.10.0`, the mapping name
+`sha256-subseed-little-endian-mask-v1`, both-parity sampling, and
+equality-before-duplicate rejection. The byte-level mapping is authoritative in
+[`docs/experimental-methodology.md`](../../docs/experimental-methodology.md).
+Configuration IDs hash canonical validated JSON; canonical plans exclude run
+IDs and time so repeated materialization is byte-identical.
+
 ### Results
 
 The MVP writes one versioned JSONL-compatible record per observation. A record
@@ -172,6 +179,11 @@ Large integers and trajectories remain outside Git and are addressed by
 SHA-256 plus metadata. Exceptional observations remain
 `needs-reproduction` in research metadata until the independent confirmation
 procedure succeeds.
+
+The PBI-004 runner executes classical step limits through reference, BigInt,
+or hybrid policy. Version-1 schema fields and result statuses reserve verified
+bounds plus time and resource limits, but a non-null unsupported limit is
+rejected before execution rather than ignored.
 
 ### Formal verification boundary
 
@@ -201,7 +213,7 @@ software stack.
 
 ### Definition of Done
 
-- [ ] Single, list, and supported-generator inputs are accepted and validated.
+- [x] Single, list, and supported-generator inputs are accepted and validated.
 - [x] The checked reference engine implements classical steps, finite limits,
   counts, first descent, and peak semantics without wrapping.
 - [x] BigInt and hybrid execution preserve the same semantics, and promotion
@@ -210,18 +222,20 @@ software stack.
 - [x] Lean builds with no `sorry`, principal theorems do not depend on
   `sorryAx`, and small examples match the mathematical authority.
 - [x] Common-domain and promotion differential tests pass.
-- [ ] MVP generators reconstruct their declared values and provenance.
-- [ ] Deterministic matched controls can be regenerated from configuration.
-- [ ] A stopped experiment reports its exact status and never presents a prefix
+- [x] MVP generators reconstruct their declared values and provenance.
+- [x] Deterministic matched controls can be regenerated from configuration.
+- [x] A stopped experiment reports its exact status and never presents a prefix
   metric as a complete trajectory metric.
-- [ ] Versioned result records contain enough configuration and provenance for
+- [x] Versioned result records contain enough configuration and provenance for
   reproduction.
-- [ ] Exceptional results remain `needs-reproduction` until independently
+- [x] Exceptional results remain `needs-reproduction` until independently
   confirmed.
 - [x] The implemented engine portion of the Minimal Quality Gate passes with
   exact command evidence in
   [`PBI-002`](../../tasks/PBI-002-rust-reference-engine.md) and
-  [`PBI-003`](../../tasks/PBI-003-arbitrary-precision-engine.md).
+  [`PBI-003`](../../tasks/PBI-003-arbitrary-precision-engine.md), with the
+  experiment slice recorded in
+  [`PBI-004`](../../tasks/PBI-004-experiment-catalog.md).
 
 ### Regression guardrails
 

@@ -1,6 +1,6 @@
 # PBI-004: Deliver the First Reproducible Experiment Catalog
 
-- **Status:** Planned; blocked on PBI-003 and dependency approval
+- **Status:** Implemented; ready for review
 - **Type:** Small vertical experiment slice
 
 ## Goal
@@ -19,11 +19,9 @@ candidate.
 
 ## Dependencies
 
-- Blocked by: PBI-003.
-- Blocked by: explicit human approval of exact pinned serialization,
-  deterministic-random, and SHA-256 dependencies. The proposed minimal set is
-  `serde`, `serde_json`, `rand_chacha`, and `sha2`; no dependency is added merely
-  because it appears here.
+- Depends on: completed PBI-003.
+- Dependency approval recorded 2026-08-08 for exact pins `serde 1.0.229`,
+  `serde_json 1.0.151`, `rand_chacha 0.10.0`, and `sha2 0.11.0`.
 - Must merge before: any non-oracle research experiment or external data import.
 
 ## Context pointers
@@ -128,31 +126,31 @@ PBI's test/smoke runs complete and must follow its README.
 
 ## Acceptance criteria
 
-- [ ] Single literal, ordered list, and each supported generator definition can
+- [x] Single literal, ordered list, and each supported generator definition can
   be validated and executed.
-- [ ] Invalid domains or inconsistent declared metadata yield `invalid_input`
+- [x] Invalid domains or inconsistent declared metadata yield `invalid_input`
   before engine execution.
-- [ ] Every number/result carries the required provenance fields.
-- [ ] Imported values require a matching SHA-256; locally generated values are
+- [x] Every number/result carries the required provenance fields.
+- [x] Imported values require a matching SHA-256; locally generated values are
   reproducible from formula and parameters.
-- [ ] Two plans from the same configuration produce byte-identical ordered
+- [x] Two plans from the same configuration produce byte-identical ordered
   inputs and controls.
-- [ ] Every control has the matched special input's bit length and follows the
+- [x] Every control has the matched special input's bit length and follows the
   declared duplicate/equality rejection policy.
-- [ ] A seed is stored together with algorithm, version, mapping, and rejection
+- [x] A seed is stored together with algorithm, version, mapping, and rejection
   rules.
-- [ ] Rerunning one configuration keeps the configuration ID and creates a new
+- [x] Rerunning one configuration keeps the configuration ID and creates a new
   run ID.
-- [ ] Result lines distinguish complete metrics from prefix metrics and use the
+- [x] Result lines distinguish complete metrics from prefix metrics and use the
   controlled termination statuses.
-- [ ] EXP-001 reproduces the fixed known values.
-- [ ] EXP-002 is small, deterministic, and stored/reported without a global or
+- [x] EXP-001 reproduces the fixed known values.
+- [x] EXP-002 is small, deterministic, and stored/reported without a global or
   causal claim.
-- [ ] Exceptional output is `needs-reproduction` until the documented
+- [x] Exceptional output is `needs-reproduction` until the documented
   independent procedure succeeds.
-- [ ] No large value/trajectory, network fetcher, database, or automatic
+- [x] No large value/trajectory, network fetcher, database, or automatic
   publication is introduced.
-- [ ] Rust, Lean, coverage, and reference mutation gates still pass.
+- [x] Rust, Lean, coverage, and reference mutation gates still pass.
 
 ## Deterministic verification commands
 
@@ -207,6 +205,40 @@ Dependencies are explicitly approved and pinned, schemas and behavior match the
 Spec, plans reproduce byte-for-byte, fixed examples and the small comparison run
 complete, quality gates remain green, and the logbook records actual run IDs and
 validation without overstated claims.
+
+## Closure evidence (2026-08-08)
+
+The Codex process did not inherit `~/.cargo/bin` in `PATH`, so Rust commands
+below were executed with the explicit Cargo path shown. All commands ran from
+the repository root unless a different working directory is stated.
+
+- `lake build` in `lean/` — exit `0`; 1049 jobs completed.
+- `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`.
+- `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  — exit `0`; no warnings.
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 57
+  tests passed.
+- `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace --all-features`
+  — exit `0`; informational workspace line coverage `73.90%`.
+- `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90`
+  — exit `0`; core line coverage `98.47%`.
+- `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file crates/collatz-engine/src/reference.rs`
+  — exit `0`; 15 mutants tested, 12 caught, 3 unviable, zero survivors.
+- `/Users/dariuszlubomski/.cargo/bin/cargo run -p collatz-cli -- catalog validate catalog/inputs-v1.jsonl`
+  — exit `0`; exactly 10 version-1 records and zero invalid records.
+- Two `experiment plan` commands for EXP-002 followed by `cmp` — all exit `0`;
+  27 inputs, configuration ID
+  `34dc3a0415bad44c76c1598c70a9a18d4a46e6333511daa4c9acfebebe8d4b6e`,
+  and byte-identical plans.
+- `experiment run` for EXP-001 — exit `0`; four results reproduce steps
+  `0/1/7/111` and peaks `1/2/16/9232`.
+- `experiment run` for EXP-002 — exit `0`; 27 uniquely identified results,
+  consisting of three special values and 24 controls under one configuration
+  and run ID.
+- `git diff --check` — exit `0`.
+
+The reviewed research run IDs and per-observation summary are stored in
+[`research/results/2026-08-08-exp-001-exp-002.md`](../research/results/2026-08-08-exp-001-exp-002.md).
 
 ## Independent review
 

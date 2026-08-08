@@ -72,6 +72,36 @@ A recorded seed is insufficient by itself: the pseudorandom algorithm, output
 mapping, rejection order, and implementation version are also part of the
 configuration.
 
+### Version-1 deterministic mapping
+
+The implemented version-1 control contract uses `ChaCha20` from
+`rand_chacha 0.10.0` and a 32-byte lowercase-hexadecimal master seed. For every
+zero-based `(experiment ID, input ID, replicate index)` mapping, it derives the
+ChaCha seed as SHA-256 over these bytes in order:
+
+1. ASCII `collatz-lab-control-v1` followed by one zero byte;
+2. the 32 decoded master-seed bytes followed by one zero byte;
+3. UTF-8 experiment ID followed by one zero byte;
+4. UTF-8 input ID followed by one zero byte;
+5. the replicate index as an unsigned 32-bit big-endian integer.
+
+Each replicate starts its own ChaCha stream. A candidate of bit length `b`
+uses `ceil(b / 8)` stream bytes as a little-endian integer. Unused high bits in
+the final byte are cleared and the highest retained bit is set, producing a
+value in `[2^(b-1), 2^b - 1]` without modulo bias. The stream advances on a
+rejection. Version 1 admits both parities, first rejects equality with the
+matched special value, and then rejects duplicates already accepted for that
+matched value. The stable mapping name is
+`sha256-subseed-little-endian-mask-v1`; any change requires a new name and
+configuration ID.
+
+Version-1 configuration IDs are lowercase SHA-256 of the compact UTF-8 JSON
+emitted from the validated configuration in declared struct-field order, with
+no run identifier or clock data. Canonical plans add reconstructed ordered
+inputs and controls but likewise exclude run-specific state. Repeating a plan
+therefore produces identical bytes, while executing it creates a distinct run
+ID.
+
 ## Metrics
 
 The authoritative formulas are in
