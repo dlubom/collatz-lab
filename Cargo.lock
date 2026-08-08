@@ -169,6 +169,7 @@ name = "collatz-experiments"
 version = "0.1.0"
 dependencies = [
  "collatz-engine",
+ "proptest",
  "rand_chacha 0.10.0",
  "rug",
  "serde",

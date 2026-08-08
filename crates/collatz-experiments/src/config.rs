@@ -369,9 +369,12 @@ impl std::error::Error for ExperimentConfigError {
 
 fn validate_identifier(field: &'static str, value: &str) -> Result<(), ExperimentConfigError> {
     if value.is_empty()
-        || !value
-            .bytes()
-            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+        || !value.split('-').all(|segment| {
+            !segment.is_empty()
+                && segment
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+        })
     {
         Err(ExperimentConfigError::InvalidIdentifier {
             field,

@@ -12,7 +12,6 @@ use collatz_engine::{
 use sha2::{Digest, Sha256};
 
 use crate::config::EXPERIMENT_PLAN_SCHEMA_VERSION;
-use crate::number::hex_sha256;
 use crate::{
     Catalog, CatalogError, EngineOutcome, EnginePolicy, ExperimentConfigError,
     ExperimentConfiguration, ExperimentPlan, ExperimentStatus, LabeledMetric, PlannedInput,
@@ -339,9 +338,14 @@ fn create_run_id(configuration_id: &str) -> String {
 }
 
 fn create_result_id(run_id: &str, observation_index: u32, input_id: &str) -> String {
-    let serializable = (run_id, observation_index, input_id);
-    let bytes = serde_json::to_vec(&serializable).unwrap_or_default();
-    format!("result-{}", hex_sha256(&bytes))
+    let mut hasher = Sha256::new();
+    hasher.update(b"collatz-lab-result-v1\0");
+    hasher.update(run_id.as_bytes());
+    hasher.update(b"\0");
+    hasher.update(observation_index.to_be_bytes());
+    hasher.update(b"\0");
+    hasher.update(input_id.as_bytes());
+    format!("result-{}", digest_hex(hasher))
 }
 
 fn digest_hex(hasher: Sha256) -> String {

@@ -330,9 +330,12 @@ fn require_positive_parameter(name: &'static str, value: u32) -> Result<(), Numb
 
 fn validate_identifier(field: &'static str, value: &str) -> Result<(), NumberValidationError> {
     if value.is_empty()
-        || !value
-            .bytes()
-            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+        || !value.split('-').all(|segment| {
+            !segment.is_empty()
+                && segment
+                    .bytes()
+                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+        })
     {
         Err(NumberValidationError::InvalidIdentifier {
             field,
@@ -375,6 +378,16 @@ fn validate_provenance(
         ValueOrigin::Generated => {
             if provenance.imported_value_sha256.is_some() {
                 return Err(NumberValidationError::GeneratedValueHasImportedHash);
+            }
+            if let Some(external_id) = provenance.external_id.as_deref() {
+                validate_nonempty("provenance.external_id", external_id)?;
+                let retrieval_date = require_present(
+                    "provenance.retrieval_date",
+                    provenance.retrieval_date.as_deref(),
+                )?;
+                validate_date(retrieval_date)?;
+            } else if let Some(retrieval_date) = provenance.retrieval_date.as_deref() {
+                validate_date(retrieval_date)?;
             }
         }
         ValueOrigin::Imported => {
@@ -427,9 +440,19 @@ fn validate_date(value: &str) -> Result<(), NumberValidationError> {
         });
     }
 
+    let year = value[0..4].parse::<u16>().unwrap_or(0);
     let month = value[5..7].parse::<u8>().unwrap_or(0);
     let day = value[8..10].parse::<u8>().unwrap_or(0);
-    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+    let leap_year =
+        year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400));
+    let days_in_month = match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if leap_year => 29,
+        2 => 28,
+        _ => 0,
+    };
+    if year == 0 || day == 0 || day > days_in_month {
         return Err(NumberValidationError::InvalidRetrievalDate {
             value: value.into(),
         });
