@@ -90,6 +90,7 @@ fn fermat_zero_is_valid_and_the_shift_interface_boundary_is_explicit() {
     definition.input_id = "fermat-0".into();
     definition.name = "Fermat F0".into();
     definition.construction = NumberConstruction::Fermat { index: 0 };
+    definition.provenance.reconstruction_note = "Reconstruct as 2^(2^0) + 1.".into();
     definition.declared_bit_length = 2;
     definition.declared_decimal_digits = 1;
 
