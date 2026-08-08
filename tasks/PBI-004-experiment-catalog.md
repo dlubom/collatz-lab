@@ -236,30 +236,37 @@ the repository root unless a different working directory is stated.
 - `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets --all-features -- -D warnings`
   — exit `0`; no warnings.
-- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 68
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 74
   tests passed.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace --all-features`
-  — exit `0`; informational workspace line coverage `80.22%`.
+  — exit `0`; informational workspace line coverage `78.94%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90`
   — exit `0`; core line coverage `98.47%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file crates/collatz-engine/src/reference.rs`
   — exit `0`; 15 mutants tested, 12 caught, 3 unviable, zero survivors.
+- `/Users/dariuszlubomski/.cargo/bin/cargo bench --workspace --no-run` — exit
+  `0`; all benchmark targets compiled.
 - `/Users/dariuszlubomski/.cargo/bin/cargo run -p collatz-cli -- catalog validate catalog/inputs-v1.jsonl`
   — exit `0`; exactly 10 version-1 records and zero invalid records.
 - Two `experiment plan` commands for EXP-002 followed by `cmp` — all exit `0`;
   27 inputs, configuration ID
-  `04ed8e91a40539979d0333bc3dcbb540584c7610002a9ae1e34e72c4aef983bf`,
+  `4131b127713037360487a3096f0a4ce2511eba6abd3fca2b75c9b6f32361464a`,
   and byte-identical plans with SHA-256
-  `a1ca1ce38063e290df167481c120643736ea4adc8535ff446c21ba8dc613f54d`.
+  `5f0a56cff868ae6c3f9fe012bd9390cf43f5ad315c92f4ac1b81cc63b8ff513e`.
 - `experiment run` for EXP-001 — exit `0`; four results reproduce steps
   `0/1/7/111` and peaks `1/2/16/9232`.
 - `experiment run` for EXP-002 — exit `0`; 27 uniquely identified results,
   consisting of three special values and 24 controls under one configuration
   and run ID.
-- Review regressions prove that configurations cannot claim a commit different
-  from the built program, version 1 rejects more than 4096 controls before
-  allocation, result provenance comes from build metadata, and plan/run output
-  failures share the public `io_error` category.
+- Review regressions prove that the stable source-content hash remains valid
+  when Git commit identity changes; result-stream I/O remains `io_error`;
+  invalid UTF-8 remains `invalid_input`; metadata/hash mismatches remain
+  `verification_failed`; version 1 rejects more than 16384 total observations
+  before allocation; and real Draft 2020-12 validation covers the catalog,
+  configurations, results, and negative schema cases.
+- Post-commit smoke runs accepted program-source SHA-256
+  `afc4d5528021b806fe8e0ba0bd17b1c7c3379bc1d1f8af5fe1ea52a1a2f445a1`
+  and every result reported `program_source_dirty: false`.
 - `git diff --check` — exit `0`.
 
 The reviewed research run IDs and per-observation summary are stored in

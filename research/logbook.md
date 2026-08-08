@@ -116,6 +116,27 @@ the versioned result format rather than expanding the logbook.
   count was not operationally bounded, and plan-output I/O was mislabeled as
   `invalid_input`. Build provenance, the version-1 maximum, fallible
   reservations, and the `io_error` CLI category now close those gaps.
+- A second follow-up review found that Git commit identity was unstable across
+  the repository's squash/rebase merge methods, result-stream I/O and catalog
+  decoding had ambiguous status mappings, provenance mismatches were
+  underclassified, aggregate observation allocation remained unbounded, and
+  schemas did not encode the runtime contract. The corrected version uses
+  stable program-source SHA-256
+  `afc4d5528021b806fe8e0ba0bd17b1c7c3379bc1d1f8af5fe1ea52a1a2f445a1`,
+  explicit local/external provenance, a 16384-observation cap with fallible
+  reservations, and a real Draft 2020-12 schema validator. The same source hash
+  was accepted before and after Git commit `fa7d34e`, while the post-commit run
+  reported `program_source_dirty: false`.
+- The superseding review-fix runs use EXP-001 configuration
+  `cae8ddb1d22bf0995df41eecf35ed699a0deaa22a02418e7f44cfe2b2cc8e4ce`
+  and run
+  `run-22708e509f5cb8df86d8b867ab95a56550aa087f3a13cfbec22e40fddd3055cb`;
+  EXP-002 configuration
+  `4131b127713037360487a3096f0a4ce2511eba6abd3fca2b75c9b6f32361464a`
+  and run
+  `run-a36470f52c2c7a40bbacb772e99fc04bd6e8ce3d2e34b2e3f0b502354326db1f`.
+  Its two canonical plans were byte-identical with SHA-256
+  `5f0a56cff868ae6c3f9fe012bd9390cf43f5ad315c92f4ac1b81cc63b8ff513e`.
 
 ### Open questions
 
