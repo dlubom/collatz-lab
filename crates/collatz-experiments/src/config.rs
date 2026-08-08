@@ -90,6 +90,9 @@ impl ExperimentConfiguration {
         if self.verified_bound.is_some() {
             return Err(ExperimentConfigError::VerifiedBoundNotExecutable);
         }
+        if self.limits.time_limit_ms.is_some() || self.limits.resource_limit_bytes.is_some() {
+            return Err(ExperimentConfigError::OperationalLimitNotExecutable);
+        }
         if self.output_format_version != RESULT_FORMAT_VERSION {
             return Err(ExperimentConfigError::UnsupportedOutputFormatVersion {
                 found: self.output_format_version,
@@ -297,6 +300,7 @@ pub enum ExperimentConfigError {
     },
     InvalidControls(ControlError),
     VerifiedBoundNotExecutable,
+    OperationalLimitNotExecutable,
     InvalidProgramCommit {
         value: String,
     },
@@ -336,6 +340,9 @@ impl fmt::Display for ExperimentConfigError {
             Self::InvalidControls(source) => write!(formatter, "invalid controls: {source}"),
             Self::VerifiedBoundNotExecutable => formatter.write_str(
                 "verified-bound execution is not implemented in PBI-004; omit verified_bound",
+            ),
+            Self::OperationalLimitNotExecutable => formatter.write_str(
+                "time and resource limits are schema-reserved but not executable in PBI-004",
             ),
             Self::InvalidProgramCommit { value } => {
                 write!(

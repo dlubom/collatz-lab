@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dlubom/collatz-lab/schemas/result-v1.schema.json",
+  "title": "Collatz Lab result record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "result_id",
+    "experiment_id",
+    "configuration_id",
+    "run_id",
+    "observation_index",
+    "input",
+    "engine_policy",
+    "limits",
+    "status",
+    "engine_outcome",
+    "completed_classical_steps",
+    "classical_steps_to_one",
+    "observed_peak",
+    "first_descent",
+    "last_value",
+    "elapsed_nanoseconds",
+    "promotion_count",
+    "program_commit",
+    "validation_state",
+    "validation_method"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "result_id": { "type": "string", "pattern": "^result-[0-9a-f]{64}$" },
+    "experiment_id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "configuration_id": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "run_id": { "type": "string", "pattern": "^run-[0-9a-f]{64}$" },
+    "observation_index": { "type": "integer", "minimum": 0 },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "matched_special_input_id",
+        "replicate_index",
+        "definition",
+        "decimal_value"
+      ],
+      "properties": {
+        "role": { "enum": ["special", "control"] },
+        "matched_special_input_id": { "type": ["string", "null"] },
+        "replicate_index": { "type": ["integer", "null"], "minimum": 0 },
+        "definition": { "$ref": "number-definition-v1.schema.json" },
+        "decimal_value": { "type": "string", "pattern": "^[1-9][0-9]*$" }
+      }
+    },
+    "engine_policy": { "enum": ["reference", "bigint", "hybrid"] },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classical_step_limit", "time_limit_ms", "resource_limit_bytes"],
+      "properties": {
+        "classical_step_limit": { "type": "integer", "minimum": 0 },
+        "time_limit_ms": { "type": ["integer", "null"], "minimum": 1 },
+        "resource_limit_bytes": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "status": {
+      "enum": [
+        "reached_one",
+        "reached_verified_bound",
+        "step_limit_reached",
+        "time_limit_reached",
+        "resource_limit_reached",
+        "invalid_input",
+        "verification_failed"
+      ]
+    },
+    "engine_outcome": {
+      "enum": ["completed", "reference_arithmetic_overflow", "input_not_representable"]
+    },
+    "completed_classical_steps": { "type": "integer", "minimum": 0 },
+    "classical_steps_to_one": { "$ref": "#/$defs/u64Metric" },
+    "observed_peak": { "$ref": "#/$defs/decimalMetric" },
+    "first_descent": { "$ref": "#/$defs/u64Metric" },
+    "last_value": { "type": ["string", "null"], "pattern": "^[1-9][0-9]*$" },
+    "elapsed_nanoseconds": { "type": "integer", "minimum": 0 },
+    "promotion_count": { "type": "integer", "minimum": 0, "maximum": 1 },
+    "program_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "validation_state": {
+      "enum": ["validated", "needs_reproduction", "verification_failed"]
+    },
+    "validation_method": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "completeness": { "enum": ["complete", "prefix", "unavailable", "derived"] },
+    "u64Metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completeness", "value"],
+      "properties": {
+        "completeness": { "$ref": "#/$defs/completeness" },
+        "value": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "decimalMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completeness", "value"],
+      "properties": {
+        "completeness": { "$ref": "#/$defs/completeness" },
+        "value": { "type": ["string", "null"], "pattern": "^[1-9][0-9]*$" }
+      }
+    }
+  }
+}

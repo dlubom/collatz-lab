@@ -6,6 +6,8 @@ pub mod catalog;
 pub mod config;
 pub mod controls;
 pub mod number;
+pub mod result;
+pub mod runner;
 
 pub use catalog::{Catalog, CatalogError};
 pub use config::{
@@ -20,3 +22,8 @@ pub use number::{
     NUMBER_DEFINITION_SCHEMA_VERSION, NumberConstruction, NumberDefinition, NumberValidationError,
     Provenance, ValidatedNumber, ValueOrigin,
 };
+pub use result::{
+    EngineOutcome, ExperimentStatus, LabeledMetric, MetricCompleteness, ResultRecord,
+    ValidationState,
+};
+pub use runner::{RunOutput, RunnerError, materialize_configuration, run_configuration};
