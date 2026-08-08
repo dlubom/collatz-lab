@@ -1,0 +1,14 @@
+[package]
+name = "collatz-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "collatz-cli"
+path = "src/main.rs"
+
+[dependencies]
+collatz-experiments = { path = "../collatz-experiments" }

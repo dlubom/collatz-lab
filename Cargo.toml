@@ -1,5 +1,9 @@
 [workspace]
-members = ["crates/collatz-engine"]
+members = [
+    "crates/collatz-cli",
+    "crates/collatz-engine",
+    "crates/collatz-experiments",
+]
 resolver = "3"
 
 [workspace.package]
