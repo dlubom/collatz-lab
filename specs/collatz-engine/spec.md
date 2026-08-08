@@ -212,6 +212,8 @@ Malformed definitions/configurations, including invalid UTF-8 content, use
 `invalid_input`; reconstructed metadata or provenance/hash disagreement uses
 `verification_failed`; and filesystem failures use `io_error` for catalog
 reads, configuration reads, plan writes, and every stage of result writes.
+Contradictory provenance fields are disagreement, while a missing required
+field remains malformed input.
 
 ### Formal verification boundary
 

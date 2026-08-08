@@ -206,6 +206,28 @@ fn external_provenance_requires_a_retrieval_date_even_without_an_external_id() {
 }
 
 #[test]
+fn contradictory_provenance_fields_are_verification_failed() {
+    let mut definition = reviewed_catalog()
+        .get("literal-3")
+        .expect("fixture exists")
+        .definition()
+        .clone();
+    definition.provenance.retrieval_date = Some("2026-08-08".into());
+
+    let error = ValidatedNumber::validate(definition.clone())
+        .expect_err("local provenance with an external date must disagree");
+    assert!(matches!(
+        error,
+        NumberValidationError::InvalidProvenanceCombination { .. }
+    ));
+    assert_eq!(error.status_code(), "verification_failed");
+
+    let catalog_error =
+        Catalog::from_definitions(vec![definition]).expect_err("catalog must preserve status");
+    assert_eq!(catalog_error.status_code(), "verification_failed");
+}
+
+#[test]
 fn invalid_utf8_in_a_catalog_is_invalid_input_not_an_io_failure() {
     let path =
         std::env::temp_dir().join(format!("collatz-invalid-utf8-{}.jsonl", std::process::id()));
@@ -274,14 +296,20 @@ fn all_three_version_one_schemas_are_reviewable_json_documents() {
         assert_schema_valid(&number_validator, instance);
     }
 
-    for relative in ["experiments/EXP-001.json", "experiments/EXP-002.json"] {
-        assert_schema_valid(&config_validator, &schema(relative));
+    let config_instances = [
+        schema("experiments/EXP-001.json"),
+        schema("experiments/EXP-002.json"),
+    ];
+    for instance in &config_instances {
+        assert_schema_valid(&config_validator, instance);
     }
 
     let run = run_exp001();
+    let mut result_instances = Vec::new();
     for record in run.records {
         let instance = serde_json::to_value(record).expect("result record serializes");
         assert_schema_valid(&result_validator, &instance);
+        result_instances.push(instance);
     }
 
     let mut imported_missing_fields = number_instances[0].clone();
@@ -296,6 +324,25 @@ fn all_three_version_one_schemas_are_reviewable_json_documents() {
     let mut fermat_outside_v1 = number_instances[7].clone();
     fermat_outside_v1["construction"]["index"] = json!(32);
     assert!(!number_validator.is_valid(&fermat_outside_v1));
+
+    let mut construction_outside_u32 = number_instances[4].clone();
+    construction_outside_u32["construction"]["exponent"] = json!(4_294_967_296_u64);
+    assert!(!number_validator.is_valid(&construction_outside_u32));
+    assert!(serde_json::from_value::<NumberDefinition>(construction_outside_u32).is_err());
+
+    let outside_u64: serde_json::Value =
+        serde_json::from_str("18446744073709551616").expect("2^64 is valid JSON numeric syntax");
+    let mut limit_outside_u64 = config_instances[0].clone();
+    limit_outside_u64["limits"]["classical_step_limit"] = outside_u64;
+    assert!(!config_validator.is_valid(&limit_outside_u64));
+    assert!(serde_json::from_value::<ExperimentConfiguration>(limit_outside_u64).is_err());
+
+    let mut result_outside_u32 = result_instances[0].clone();
+    result_outside_u32["observation_index"] = json!(4_294_967_296_u64);
+    assert!(!result_validator.is_valid(&result_outside_u32));
+    assert!(
+        serde_json::from_value::<collatz_experiments::ResultRecord>(result_outside_u32).is_err()
+    );
 
     let mut unavailable_with_value =
         serde_json::to_value(run_exp001().records.remove(1)).expect("result record serializes");

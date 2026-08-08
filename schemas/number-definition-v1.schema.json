@@ -21,8 +21,16 @@
     "family": { "$ref": "#/$defs/identifier" },
     "construction": { "$ref": "#/$defs/construction" },
     "provenance": { "$ref": "#/$defs/provenance" },
-    "declared_bit_length": { "type": "integer", "minimum": 1 },
-    "declared_decimal_digits": { "type": "integer", "minimum": 1 }
+    "declared_bit_length": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4294967295
+    },
+    "declared_decimal_digits": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4294967295
+    }
   },
   "$defs": {
     "identifier": {
@@ -50,7 +58,11 @@
           "required": ["kind", "exponent"],
           "properties": {
             "kind": { "const": "mersenne" },
-            "exponent": { "type": "integer", "minimum": 1 }
+            "exponent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
           }
         },
         {
@@ -68,8 +80,16 @@
           "required": ["kind", "base", "length"],
           "properties": {
             "kind": { "const": "repunit" },
-            "base": { "type": "integer", "minimum": 2 },
-            "length": { "type": "integer", "minimum": 1 }
+            "base": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 4294967295
+            },
+            "length": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
           }
         },
         {
@@ -79,7 +99,11 @@
           "properties": {
             "kind": { "const": "affine_power_of_two" },
             "coefficient": { "$ref": "#/$defs/positiveDecimal" },
-            "exponent": { "type": "integer", "minimum": 1 }
+            "exponent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
           }
         }
       ]

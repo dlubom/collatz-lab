@@ -41,9 +41,21 @@
       "additionalProperties": false,
       "required": ["classical_step_limit", "time_limit_ms", "resource_limit_bytes"],
       "properties": {
-        "classical_step_limit": { "type": "integer", "minimum": 0 },
-        "time_limit_ms": { "type": ["integer", "null"], "minimum": 1 },
-        "resource_limit_bytes": { "type": ["integer", "null"], "minimum": 1 }
+        "classical_step_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "time_limit_ms": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 18446744073709551615
+        },
+        "resource_limit_bytes": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 18446744073709551615
+        }
       }
     },
     "metrics": {

@@ -256,7 +256,8 @@ impl NumberValidationError {
         match self {
             Self::MetadataMismatch { .. }
             | Self::ImportedSha256Mismatch { .. }
-            | Self::GeneratedValueHasImportedHash => "verification_failed",
+            | Self::GeneratedValueHasImportedHash
+            | Self::InvalidProvenanceCombination { .. } => "verification_failed",
             _ => "invalid_input",
         }
     }

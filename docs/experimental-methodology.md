@@ -244,6 +244,9 @@ identifies malformed or unsupported input data, including invalid UTF-8;
 disagreement; and `io_error` identifies a filesystem read or write failure,
 including an I/O error surfaced by JSON serialization. Plan and result output
 use the same mapping.
+Contradictory provenance fields, such as a local source carrying external
+retrieval metadata or an imported value declared as local, are consistency
+disagreements and therefore use `verification_failed`.
 
 Timing comparisons require the same machine description, power mode, build
 profile, toolchain, workload, warm-up policy, and competing-load notes. See
