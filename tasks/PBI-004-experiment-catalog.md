@@ -236,10 +236,10 @@ the repository root unless a different working directory is stated.
 - `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets --all-features -- -D warnings`
   — exit `0`; no warnings.
-- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 74
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 75
   tests passed.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace --all-features`
-  — exit `0`; informational workspace line coverage `78.94%`.
+  — exit `0`; informational workspace line coverage `79.09%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90`
   — exit `0`; core line coverage `98.47%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file crates/collatz-engine/src/reference.rs`
@@ -250,22 +250,23 @@ the repository root unless a different working directory is stated.
   — exit `0`; exactly 10 version-1 records and zero invalid records.
 - Two `experiment plan` commands for EXP-002 followed by `cmp` — all exit `0`;
   27 inputs, configuration ID
-  `4131b127713037360487a3096f0a4ce2511eba6abd3fca2b75c9b6f32361464a`,
+  `8cfc36cb7e16c8075a3faeb1374673617e71f672221a82186a0824a8a7a302ae`,
   and byte-identical plans with SHA-256
-  `5f0a56cff868ae6c3f9fe012bd9390cf43f5ad315c92f4ac1b81cc63b8ff513e`.
+  `574359007503cc9404d8986bf0465043e6195b96fa99945672693a9ff3efa472`.
 - `experiment run` for EXP-001 — exit `0`; four results reproduce steps
   `0/1/7/111` and peaks `1/2/16/9232`.
 - `experiment run` for EXP-002 — exit `0`; 27 uniquely identified results,
   consisting of three special values and 24 controls under one configuration
   and run ID.
-- Review regressions prove that the stable source-content hash remains valid
-  when Git commit identity changes; result-stream I/O remains `io_error`;
+- A direct pre/post-commit materialization confirmed that the stable
+  source-content hash remains valid when Git commit identity changes. Review
+  regressions prove that result-stream I/O remains `io_error`;
   invalid UTF-8 remains `invalid_input`; metadata/hash mismatches remain
   `verification_failed`; version 1 rejects more than 16384 total observations
   before allocation; and real Draft 2020-12 validation covers the catalog,
   configurations, results, and negative schema cases.
 - Post-commit smoke runs accepted program-source SHA-256
-  `afc4d5528021b806fe8e0ba0bd17b1c7c3379bc1d1f8af5fe1ea52a1a2f445a1`
+  `64aa1ef5dc7b2952990ba4fe35d90c1a40ebc65639d28e1f36beccf7cae85be5`
   and every result reported `program_source_dirty: false`.
 - `git diff --check` — exit `0`.
 

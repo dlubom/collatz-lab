@@ -137,6 +137,23 @@ the versioned result format rather than expanding the logbook.
   `run-a36470f52c2c7a40bbacb772e99fc04bd6e8ce3d2e34b2e3f0b502354326db1f`.
   Its two canonical plans were byte-identical with SHA-256
   `5f0a56cff868ae6c3f9fe012bd9390cf43f5ad315c92f4ac1b81cc63b8ff513e`.
+- Independent review then found two remaining contract gaps: contradictory
+  provenance combinations were still underclassified, and JSON schemas did not
+  cap every Rust `u32`/`u64` field. After correcting both, the final clean-source
+  rerun supersedes the immediately preceding review-fix run. It uses
+  program-source SHA-256
+  `64aa1ef5dc7b2952990ba4fe35d90c1a40ebc65639d28e1f36beccf7cae85be5`;
+  EXP-001 configuration
+  `433e5f5b981b1bf8d83ea06268798d62a7d411f023f5627ea3572dae0a445fef`
+  and run
+  `run-0b811a0016be328d8fb30b13051eafee24270d89a38890e595703c95251213c6`;
+  EXP-002 configuration
+  `8cfc36cb7e16c8075a3faeb1374673617e71f672221a82186a0824a8a7a302ae`
+  and run
+  `run-00c9679f339d7031838547e291b0c2e19a0246911a99b1fbf72dde5c579f34b8`.
+  The final canonical plan SHA-256 is
+  `574359007503cc9404d8986bf0465043e6195b96fa99945672693a9ff3efa472`;
+  all results reported `program_source_dirty: false`.
 
 ### Open questions
 
