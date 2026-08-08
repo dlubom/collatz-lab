@@ -232,10 +232,10 @@ the repository root unless a different working directory is stated.
 - `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets --all-features -- -D warnings`
   — exit `0`; no warnings.
-- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 66
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 68
   tests passed.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace --all-features`
-  — exit `0`; informational workspace line coverage `79.70%`.
+  — exit `0`; informational workspace line coverage `80.22%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90`
   — exit `0`; core line coverage `98.47%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file crates/collatz-engine/src/reference.rs`
