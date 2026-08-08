@@ -68,10 +68,10 @@ fn emit_git_rerun_paths(repository_root: &Path) -> Result<(), String> {
         "cargo:rerun-if-changed={}",
         git_directory.join("HEAD").display()
     );
-    println!(
-        "cargo:rerun-if-changed={}",
-        git_directory.join("packed-refs").display()
-    );
+    let packed_refs = git_directory.join("packed-refs");
+    if packed_refs.exists() {
+        println!("cargo:rerun-if-changed={}", packed_refs.display());
+    }
 
     let symbolic_ref = run_git_optional(repository_root, &["symbolic-ref", "-q", "HEAD"])?;
     if let Some(symbolic_ref) = symbolic_ref {
@@ -82,7 +82,9 @@ fn emit_git_rerun_paths(repository_root: &Path) -> Result<(), String> {
         } else {
             repository_root.join(ref_path)
         };
-        println!("cargo:rerun-if-changed={}", ref_path.display());
+        if ref_path.exists() {
+            println!("cargo:rerun-if-changed={}", ref_path.display());
+        }
     }
     Ok(())
 }
