@@ -95,12 +95,15 @@ matched value. The stable mapping name is
 `sha256-subseed-little-endian-mask-v1`; any change requires a new name and
 configuration ID.
 
-Version-1 configuration IDs are lowercase SHA-256 of the compact UTF-8 JSON
-emitted from the validated configuration in declared struct-field order, with
-no run identifier or clock data. Canonical plans add reconstructed ordered
-inputs and controls but likewise exclude run-specific state. Repeating a plan
-therefore produces identical bytes, while executing it creates a distinct run
-ID.
+Version-1 configuration IDs are lowercase SHA-256 of compact UTF-8 JSON in
+declared struct-field order. The hashed identity document contains the
+validated configuration and the full selected validated catalog definitions
+in `input_ids` order. Construction, provenance, and declared metadata therefore
+remain identity-bearing even when an `input_id` and reconstructed value do not
+change. The identity excludes run identifiers and clock data. Canonical plans
+add reconstructed ordered controls but likewise exclude run-specific state.
+Repeating a plan therefore produces identical bytes, while executing it creates
+a distinct run ID.
 
 ## Metrics
 
@@ -160,12 +163,17 @@ MVP.
 | `step_limit_reached` | The step limit was reached before another terminal condition |
 | `time_limit_reached` | The declared time limit stopped execution |
 | `resource_limit_reached` | A declared memory or other resource limit stopped execution |
+| `engine_error` | The selected engine could not execute an otherwise valid input; `engine_outcome` records the precise cause |
 | `invalid_input` | The number definition or value violates the input contract |
 | `verification_failed` | Reconstruction, hash, cross-engine, or independent verification disagreed |
 
-Arithmetic overflow in the bounded reference engine is an engine outcome, not
-a successful experiment status. A reference-only run records it explicitly;
-the hybrid policy promotes before the operation and records the promotion.
+Arithmetic overflow or an out-of-range input in the bounded reference engine
+uses `engine_error`; it is an engine outcome, not a successful experiment
+status. A reference-only run records the cause explicitly; the hybrid policy
+promotes before arithmetic overflow and records the promotion. A `validated`
+research state confirms that record structure, input reconstruction, and
+provenance checks succeeded; it does not turn an `engine_error` into a completed
+trajectory.
 
 ## Safe use of a verified bound
 

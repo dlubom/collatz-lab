@@ -61,6 +61,8 @@ the versioned result format rather than expanding the logbook.
 - Fixed the version-1 control mapping and canonical configuration/plan rules in
   the experimental methodology; changing them requires a new version and
   configuration ID.
+- Approved `engine_error` as the experiment status for a valid input that the
+  selected engine cannot represent or complete because of bounded arithmetic.
 - Kept full JSONL outputs outside Git and stored the small reviewable run
   summary in [`results/2026-08-08-exp-001-exp-002.md`](results/2026-08-08-exp-001-exp-002.md).
 
@@ -100,6 +102,14 @@ the versioned result format rather than expanding the logbook.
 - Schema-reserved time/resource limits and verified-bound execution are not
   silently ignored; version 1 rejects non-null values until an owning PBI
   implements them.
+- Independent review found that the first configuration-ID implementation
+  hashed selected `input_id` values without their catalog definitions. The ID
+  now also binds the selected construction, provenance, and declared metadata;
+  a regression test changes provenance without changing the numeric value.
+- Independent review also corrected the completed input `1` first-descent
+  label to `unavailable`, separated bounded-engine failures into
+  `engine_error`, and replaced a misleading Fermat-index-zero invalid-domain
+  fixture with valid `F0` and exact reconstruction-boundary coverage.
 
 ### Open questions
 

@@ -22,6 +22,8 @@ candidate.
 - Depends on: completed PBI-003.
 - Dependency approval recorded 2026-08-08 for exact pins `serde 1.0.229`,
   `serde_json 1.0.151`, `rand_chacha 0.10.0`, and `sha2 0.11.0`.
+- Public `engine_error` status approval recorded 2026-08-08 for valid inputs
+  that the selected bounded engine cannot execute.
 - Must merge before: any non-oracle research experiment or external data import.
 
 ## Context pointers

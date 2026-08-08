@@ -6,7 +6,10 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::number::hex_sha256;
-use crate::{Catalog, ControlError, ControlSpecification, GeneratedControl, NumberDefinition};
+use crate::{
+    Catalog, ControlError, ControlSpecification, GeneratedControl, NumberDefinition,
+    ValidatedNumber,
+};
 
 pub const EXPERIMENT_CONFIG_SCHEMA_VERSION: u32 = 1;
 pub const EXPERIMENT_PLAN_SCHEMA_VERSION: u32 = 1;
@@ -102,31 +105,55 @@ impl ExperimentConfiguration {
         Ok(())
     }
 
-    pub fn configuration_id(&self) -> Result<String, ExperimentConfigError> {
+    pub fn configuration_id(&self, catalog: &Catalog) -> Result<String, ExperimentConfigError> {
+        let selected_numbers = self.selected_numbers(catalog)?;
+        let selected_definitions: Vec<_> = selected_numbers
+            .iter()
+            .map(|number| number.definition().clone())
+            .collect();
+        self.configuration_id_for_definitions(&selected_definitions)
+    }
+
+    pub(crate) fn configuration_id_for_definitions(
+        &self,
+        selected_definitions: &[NumberDefinition],
+    ) -> Result<String, ExperimentConfigError> {
         self.validate()?;
-        let bytes = serde_json::to_vec(self).map_err(|source| ExperimentConfigError::Json {
-            context: "canonical experiment configuration".into(),
-            message: source.to_string(),
-        })?;
+        if selected_definitions.len() != self.input_ids.len()
+            || self
+                .input_ids
+                .iter()
+                .zip(selected_definitions)
+                .any(|(input_id, definition)| input_id != &definition.input_id)
+        {
+            return Err(ExperimentConfigError::SelectedDefinitionsMismatch);
+        }
+        let identity = ConfigurationIdentity {
+            configuration: self,
+            selected_input_definitions: selected_definitions,
+        };
+        let bytes =
+            serde_json::to_vec(&identity).map_err(|source| ExperimentConfigError::Json {
+                context: "canonical experiment identity".into(),
+                message: source.to_string(),
+            })?;
         Ok(hex_sha256(&bytes))
     }
 
     pub fn materialize(&self, catalog: &Catalog) -> Result<ExperimentPlan, ExperimentConfigError> {
-        let configuration_id = self.configuration_id()?;
+        let special_numbers = self.selected_numbers(catalog)?;
+        let selected_definitions: Vec<_> = special_numbers
+            .iter()
+            .map(|number| number.definition().clone())
+            .collect();
+        let configuration_id = self.configuration_id_for_definitions(&selected_definitions)?;
         let mut inputs = Vec::new();
-        let mut special_numbers = Vec::new();
 
-        for input_id in &self.input_ids {
-            let number = catalog.get(input_id).ok_or_else(|| {
-                ExperimentConfigError::CatalogInputMissing {
-                    input_id: input_id.clone(),
-                }
-            })?;
+        for number in &special_numbers {
             inputs.push(PlannedInput::special(
                 number.definition().clone(),
                 number.decimal_value(),
             ));
-            special_numbers.push(number);
         }
 
         if let Some(control_specification) = &self.controls {
@@ -145,6 +172,29 @@ impl ExperimentConfiguration {
             inputs,
         })
     }
+
+    fn selected_numbers<'a>(
+        &self,
+        catalog: &'a Catalog,
+    ) -> Result<Vec<&'a ValidatedNumber>, ExperimentConfigError> {
+        self.validate()?;
+        self.input_ids
+            .iter()
+            .map(|input_id| {
+                catalog
+                    .get(input_id)
+                    .ok_or_else(|| ExperimentConfigError::CatalogInputMissing {
+                        input_id: input_id.clone(),
+                    })
+            })
+            .collect()
+    }
+}
+
+#[derive(Serialize)]
+struct ConfigurationIdentity<'a> {
+    configuration: &'a ExperimentConfiguration,
+    selected_input_definitions: &'a [NumberDefinition],
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Serialize, Deserialize)]
@@ -307,6 +357,7 @@ pub enum ExperimentConfigError {
     CatalogInputMissing {
         input_id: String,
     },
+    SelectedDefinitionsMismatch,
 }
 
 impl fmt::Display for ExperimentConfigError {
@@ -353,6 +404,8 @@ impl fmt::Display for ExperimentConfigError {
             Self::CatalogInputMissing { input_id } => {
                 write!(formatter, "catalog does not contain input_id {input_id}")
             }
+            Self::SelectedDefinitionsMismatch => formatter
+                .write_str("selected input definitions do not match configured input_ids in order"),
         }
     }
 }

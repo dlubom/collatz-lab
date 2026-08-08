@@ -54,7 +54,6 @@ fn every_supported_constructor_enforces_its_documented_domain() {
             NumberConstruction::Literal { value: "0".into() },
         ),
         ("mersenne-5", NumberConstruction::Mersenne { exponent: 0 }),
-        ("fermat-2", NumberConstruction::Fermat { index: 0 }),
         (
             "repunit-10-3",
             NumberConstruction::Repunit { base: 1, length: 3 },
@@ -78,6 +77,34 @@ fn every_supported_constructor_enforces_its_documented_domain() {
         let error = ValidatedNumber::validate(definition).expect_err("invalid domain must fail");
         assert_eq!(error.status_code(), "invalid_input");
     }
+}
+
+#[test]
+fn fermat_zero_is_valid_and_the_shift_interface_boundary_is_explicit() {
+    let catalog = reviewed_catalog();
+    let mut definition = catalog
+        .get("fermat-2")
+        .expect("fixture input exists")
+        .definition()
+        .clone();
+    definition.input_id = "fermat-0".into();
+    definition.name = "Fermat F0".into();
+    definition.construction = NumberConstruction::Fermat { index: 0 };
+    definition.declared_bit_length = 2;
+    definition.declared_decimal_digits = 1;
+
+    assert_eq!(
+        ValidatedNumber::validate(definition.clone())
+            .expect("F0 is inside the documented domain")
+            .decimal_value(),
+        "3"
+    );
+
+    definition.construction = NumberConstruction::Fermat { index: 32 };
+    assert!(matches!(
+        ValidatedNumber::validate(definition),
+        Err(NumberValidationError::ReconstructionLimit { .. })
+    ));
 }
 
 #[test]

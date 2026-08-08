@@ -112,6 +112,37 @@ fn exp002_plan_is_byte_identical_and_pins_the_first_control_word() {
 }
 
 #[test]
+fn configuration_identity_binds_selected_catalog_definitions() {
+    let catalog = reviewed_catalog();
+    let configuration = load_configuration("experiments/EXP-001.json");
+    let original = configuration
+        .materialize(&catalog)
+        .expect("original plan materializes");
+    let mut definitions: Vec<_> = catalog
+        .entries()
+        .iter()
+        .map(|entry| entry.definition().clone())
+        .collect();
+    let selected = definitions
+        .iter_mut()
+        .find(|definition| definition.input_id == "literal-1")
+        .expect("selected definition exists");
+    selected.provenance.reconstruction_note =
+        "Equivalent reconstruction note whose catalog drift must change identity.".into();
+    let drifted_catalog =
+        Catalog::from_definitions(definitions).expect("drifted catalog validates");
+    let drifted = configuration
+        .materialize(&drifted_catalog)
+        .expect("drifted plan materializes");
+
+    assert_eq!(
+        original.inputs[0].decimal_value,
+        drifted.inputs[0].decimal_value
+    );
+    assert_ne!(original.configuration_id, drifted.configuration_id);
+}
+
+#[test]
 fn every_control_matches_bits_and_obeys_equality_and_duplicate_rejections() {
     let catalog = reviewed_catalog();
     let plan = load_configuration("experiments/EXP-002.json")
@@ -246,6 +277,13 @@ fn exp001_reproduces_independent_fixed_counts_and_peaks() {
             MetricCompleteness::Complete
         );
         assert_eq!(record.validation_state, ValidationState::Validated);
+        if record.input.definition.input_id == "literal-1" {
+            assert_eq!(
+                record.first_descent.completeness,
+                MetricCompleteness::Unavailable
+            );
+            assert_eq!(record.first_descent.value, None);
+        }
     }
 }
 
@@ -349,7 +387,7 @@ fn reference_overflow_is_distinct_and_counts_no_failed_transition() {
     let run = run_configuration(configuration_path.path()).expect("overflow is recorded as data");
     let result = &run.records[0];
 
-    assert_eq!(result.status, ExperimentStatus::VerificationFailed);
+    assert_eq!(result.status, ExperimentStatus::EngineError);
     assert_eq!(
         result.engine_outcome,
         EngineOutcome::ReferenceArithmeticOverflow
@@ -363,7 +401,50 @@ fn reference_overflow_is_distinct_and_counts_no_failed_transition() {
         result.last_value.as_deref(),
         Some(u128::MAX.to_string().as_str())
     );
-    assert_eq!(result.validation_state, ValidationState::VerificationFailed);
+    assert_eq!(result.validation_state, ValidationState::Validated);
+}
+
+#[test]
+fn reference_input_above_u128_is_a_validated_engine_error() {
+    let catalog_path = temp_path("above-u128-catalog.jsonl");
+    let definition = NumberDefinition {
+        schema_version: 1,
+        input_id: "above-u128".into(),
+        name: "One above u128 maximum".into(),
+        family: "boundary".into(),
+        construction: NumberConstruction::Literal {
+            value: "340282366920938463463374607431768211456".into(),
+        },
+        provenance: Provenance {
+            origin: ValueOrigin::Generated,
+            source: "Rust u128 boundary".into(),
+            external_id: None,
+            retrieval_date: None,
+            imported_value_sha256: None,
+            reconstruction_note: "Reconstruct exactly as 2^128.".into(),
+        },
+        declared_bit_length: 129,
+        declared_decimal_digits: 39,
+    };
+    let line = serde_json::to_string(&definition).expect("boundary definition serializes");
+    std::fs::write(catalog_path.path(), format!("{line}\n")).expect("boundary catalog writes");
+
+    let mut configuration = load_configuration("experiments/EXP-001.json");
+    configuration.catalog_path = catalog_path.path().to_string_lossy().into_owned();
+    configuration.input_ids = vec!["above-u128".into()];
+    let configuration_path = write_configuration(&configuration);
+    let run = run_configuration(configuration_path.path()).expect("engine error is recorded");
+    let result = &run.records[0];
+
+    assert_eq!(result.status, ExperimentStatus::EngineError);
+    assert_eq!(result.engine_outcome, EngineOutcome::InputNotRepresentable);
+    assert_eq!(result.completed_classical_steps, 0);
+    assert_eq!(
+        result.observed_peak,
+        collatz_experiments::LabeledMetric::unavailable()
+    );
+    assert_eq!(result.last_value, None);
+    assert_eq!(result.validation_state, ValidationState::Validated);
 }
 
 #[test]

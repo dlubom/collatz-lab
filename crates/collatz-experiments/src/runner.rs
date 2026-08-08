@@ -62,6 +62,9 @@ pub fn materialize_configuration(
 ) -> Result<ExperimentPlan, RunnerError> {
     let configuration =
         ExperimentConfiguration::load(configuration_path).map_err(RunnerError::Configuration)?;
+    configuration
+        .validate()
+        .map_err(RunnerError::Configuration)?;
     let catalog = Catalog::load_jsonl(&configuration.catalog_path).map_err(RunnerError::Catalog)?;
     configuration
         .materialize(&catalog)
@@ -112,9 +115,15 @@ fn validate_plan(plan: &ExperimentPlan) -> Result<(), RunnerError> {
             found: plan.schema_version,
         });
     }
+    let selected_definitions: Vec<_> = plan
+        .inputs
+        .iter()
+        .filter(|input| input.role == crate::InputRole::Special)
+        .map(|input| input.definition.clone())
+        .collect();
     let expected_id = plan
         .configuration
-        .configuration_id()
+        .configuration_id_for_definitions(&selected_definitions)
         .map_err(RunnerError::Configuration)?;
     if expected_id != plan.configuration_id {
         return Err(RunnerError::ConfigurationIdMismatch {
@@ -270,10 +279,10 @@ impl Observation {
             } else {
                 LabeledMetric::prefix(Some(observed_peak))
             },
-            first_descent: if complete || first_descent_step.is_some() {
-                LabeledMetric::complete(first_descent_step)
-            } else {
-                LabeledMetric::prefix(None)
+            first_descent: match (complete, first_descent_step) {
+                (_, Some(step)) => LabeledMetric::complete(Some(step)),
+                (true, None) => LabeledMetric::unavailable(),
+                (false, None) => LabeledMetric::prefix(None),
             },
             last_value: Some(last_value),
             promotion_count,
@@ -288,7 +297,7 @@ impl Observation {
             LabeledMetric::prefix(None)
         };
         Self {
-            status: ExperimentStatus::VerificationFailed,
+            status: ExperimentStatus::EngineError,
             engine_outcome: EngineOutcome::ReferenceArithmeticOverflow,
             completed_classical_steps: error.progress.completed_classical_steps,
             classical_steps_to_one: LabeledMetric::unavailable(),
@@ -298,13 +307,13 @@ impl Observation {
             first_descent,
             last_value: Some(error.progress.last.get().to_string()),
             promotion_count: 0,
-            validation_state: ValidationState::VerificationFailed,
+            validation_state: ValidationState::Validated,
         }
     }
 
     fn not_representable() -> Self {
         Self {
-            status: ExperimentStatus::VerificationFailed,
+            status: ExperimentStatus::EngineError,
             engine_outcome: EngineOutcome::InputNotRepresentable,
             completed_classical_steps: 0,
             classical_steps_to_one: LabeledMetric::unavailable(),
@@ -312,7 +321,7 @@ impl Observation {
             first_descent: LabeledMetric::unavailable(),
             last_value: None,
             promotion_count: 0,
-            validation_state: ValidationState::VerificationFailed,
+            validation_state: ValidationState::Validated,
         }
     }
 }

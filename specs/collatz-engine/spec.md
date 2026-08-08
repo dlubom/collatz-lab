@@ -160,8 +160,11 @@ Version 1 pins `ChaCha20` from `rand_chacha 0.10.0`, the mapping name
 `sha256-subseed-little-endian-mask-v1`, both-parity sampling, and
 equality-before-duplicate rejection. The byte-level mapping is authoritative in
 [`docs/experimental-methodology.md`](../../docs/experimental-methodology.md).
-Configuration IDs hash canonical validated JSON; canonical plans exclude run
-IDs and time so repeated materialization is byte-identical.
+Configuration IDs hash canonical validated configuration JSON together with
+the selected validated catalog definitions in configured order. This binds the
+identity to construction, provenance, and declared metadata rather than only
+their stable IDs. Canonical plans exclude run IDs and time so repeated
+materialization is byte-identical.
 
 ### Results
 
@@ -172,8 +175,10 @@ timing, promotion count, program commit, and validation state.
 
 Allowed experiment statuses are `reached_one`, `reached_verified_bound`,
 `step_limit_reached`, `time_limit_reached`, `resource_limit_reached`,
-`invalid_input`, and `verification_failed`. A reference arithmetic-overflow
-outcome is recorded distinctly and is not a successful completion.
+`engine_error`, `invalid_input`, and `verification_failed`. `engine_error`
+means the selected engine could not execute the valid input, while its precise
+cause remains in `engine_outcome`; it is not a successful completion and does
+not itself invalidate reconstructed input provenance.
 
 Large integers and trajectories remain outside Git and are addressed by
 SHA-256 plus metadata. Exceptional observations remain

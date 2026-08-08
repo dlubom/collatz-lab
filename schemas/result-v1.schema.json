@@ -70,6 +70,7 @@
         "step_limit_reached",
         "time_limit_reached",
         "resource_limit_reached",
+        "engine_error",
         "invalid_input",
         "verification_failed"
       ]

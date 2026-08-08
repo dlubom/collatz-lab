@@ -70,6 +70,7 @@ pub enum ExperimentStatus {
     StepLimitReached,
     TimeLimitReached,
     ResourceLimitReached,
+    EngineError,
     InvalidInput,
     VerificationFailed,
 }
