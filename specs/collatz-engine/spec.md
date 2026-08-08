@@ -1,6 +1,6 @@
 # Feature: Collatz Lab MVP
 
-- **Status:** Accepted baseline; Lean model and scalar Rust engines implemented
+- **Status:** Accepted baseline; Lean model, scalar engines, and experiment slice implemented
 - **ASDLC mode:** Lightweight, spec-anchored
 - **Scope:** Collatz execution, selected-number experiments, provenance, and
   reproducible MVP results
@@ -135,14 +135,16 @@ The MVP recognizes:
 - a positive decimal integer literal;
 - an ordered list of accepted definitions;
 - Mersenne `2^p - 1`, with `p >= 1`;
-- Fermat `2^(2^k) + 1`, with `k >= 0`;
+- Fermat `2^(2^k) + 1`, with `0 <= k <= 31` in schema version 1;
 - repunit `(b^d - 1)/(b - 1)`, with `b >= 2`, `d >= 1`;
 - `a * 2^m - 1`, with `a >= 1`, `m >= 1`.
 
 Each definition carries a stable ID, name, family, exact construction and
-parameters, source metadata, external ID if relevant, retrieval date when
-external, derived bit length and decimal digits, and an imported-value SHA-256
-when applicable. Unsupported or internally inconsistent definitions are
+parameters, an explicit local-or-external source kind, source metadata,
+external ID if relevant, retrieval date for every external source, derived bit
+length and decimal digits, and an imported-value SHA-256 when applicable.
+Imported values require external provenance, a nonempty external ID, a date,
+and a matching hash. Unsupported or internally inconsistent definitions are
 rejected rather than guessed.
 
 ### Experiment configuration and controls
@@ -150,28 +152,68 @@ rejected rather than guessed.
 Every experiment has a stable experiment ID and an exact configuration ID.
 Configuration includes ordered inputs, schema version, engine policy, limits,
 metrics, optional verified-bound reference, deterministic control algorithm and
-seed, output version, and program commit.
+seed, output version, and program-source SHA-256.
+
+The declared program-source SHA-256 must equal the stable content hash embedded
+by the build. The hash covers the sorted executable-source paths and file bytes
+under a versioned domain separator, so commit rewriting by squash or rebase does
+not change it when the source snapshot is unchanged. Results copy the embedded
+value rather than trusting configuration text and also state whether those
+paths had Git worktree changes at build time. A mismatch is rejected before
+execution as `verification_failed`.
 
 The default comparison control matches each special input's bit length and uses
 a comparable declared sample size. Algorithm, version, seed, mapping, and
 rejection rules are stored so controls can be regenerated exactly.
+
+Version 1 pins `ChaCha20` from `rand_chacha 0.10.0`, the mapping name
+`sha256-subseed-little-endian-mask-v1`, both-parity sampling, and
+equality-before-duplicate rejection. The byte-level mapping is authoritative in
+[`docs/experimental-methodology.md`](../../docs/experimental-methodology.md).
+Version 1 accepts at most 4096 controls per matched input and at most 16384
+total observations, where the total is
+`input_count * (1 + controls_per_input)`. Checked arithmetic and fallible
+reservations reject an excessive or unallocatable plan before generation.
+Configuration IDs hash canonical validated configuration JSON together with
+the selected validated catalog definitions in configured order. This binds the
+identity to construction, provenance, and declared metadata rather than only
+their stable IDs. Canonical plans exclude run IDs and time so repeated
+materialization is byte-identical.
 
 ### Results
 
 The MVP writes one versioned JSONL-compatible record per observation. A record
 contains identifiers, reconstructed input metadata, engine policy, limits,
 termination status, completed counts, complete or prefix-labeled metrics,
-timing, promotion count, program commit, and validation state.
+timing, promotion count, program-source SHA-256, and validation state.
+The program-source SHA-256 comes from build metadata;
+`program_source_dirty` makes Git worktree changes to executable sources
+explicit. A metric labeled `unavailable` always carries a null value.
 
 Allowed experiment statuses are `reached_one`, `reached_verified_bound`,
 `step_limit_reached`, `time_limit_reached`, `resource_limit_reached`,
-`invalid_input`, and `verification_failed`. A reference arithmetic-overflow
-outcome is recorded distinctly and is not a successful completion.
+`engine_error`, `invalid_input`, and `verification_failed`. `engine_error`
+means the selected engine could not execute the valid input, while its precise
+cause remains in `engine_outcome`; it is not a successful completion and does
+not itself invalidate reconstructed input provenance.
 
 Large integers and trajectories remain outside Git and are addressed by
 SHA-256 plus metadata. Exceptional observations remain
 `needs-reproduction` in research metadata until the independent confirmation
 procedure succeeds.
+
+The PBI-004 runner executes classical step limits through reference, BigInt,
+or hybrid policy. Version-1 schema fields and result statuses reserve verified
+bounds plus time and resource limits, but a non-null unsupported limit is
+rejected before execution rather than ignored.
+
+CLI diagnostic codes are separate from experiment termination statuses.
+Malformed definitions/configurations, including invalid UTF-8 content, use
+`invalid_input`; reconstructed metadata or provenance/hash disagreement uses
+`verification_failed`; and filesystem failures use `io_error` for catalog
+reads, configuration reads, plan writes, and every stage of result writes.
+Contradictory provenance fields are disagreement, while a missing required
+field remains malformed input.
 
 ### Formal verification boundary
 
@@ -201,7 +243,7 @@ software stack.
 
 ### Definition of Done
 
-- [ ] Single, list, and supported-generator inputs are accepted and validated.
+- [x] Single, list, and supported-generator inputs are accepted and validated.
 - [x] The checked reference engine implements classical steps, finite limits,
   counts, first descent, and peak semantics without wrapping.
 - [x] BigInt and hybrid execution preserve the same semantics, and promotion
@@ -210,18 +252,20 @@ software stack.
 - [x] Lean builds with no `sorry`, principal theorems do not depend on
   `sorryAx`, and small examples match the mathematical authority.
 - [x] Common-domain and promotion differential tests pass.
-- [ ] MVP generators reconstruct their declared values and provenance.
-- [ ] Deterministic matched controls can be regenerated from configuration.
-- [ ] A stopped experiment reports its exact status and never presents a prefix
+- [x] MVP generators reconstruct their declared values and provenance.
+- [x] Deterministic matched controls can be regenerated from configuration.
+- [x] A stopped experiment reports its exact status and never presents a prefix
   metric as a complete trajectory metric.
-- [ ] Versioned result records contain enough configuration and provenance for
+- [x] Versioned result records contain enough configuration and provenance for
   reproduction.
-- [ ] Exceptional results remain `needs-reproduction` until independently
+- [x] Exceptional results remain `needs-reproduction` until independently
   confirmed.
 - [x] The implemented engine portion of the Minimal Quality Gate passes with
   exact command evidence in
   [`PBI-002`](../../tasks/PBI-002-rust-reference-engine.md) and
-  [`PBI-003`](../../tasks/PBI-003-arbitrary-precision-engine.md).
+  [`PBI-003`](../../tasks/PBI-003-arbitrary-precision-engine.md), with the
+  experiment slice recorded in
+  [`PBI-004`](../../tasks/PBI-004-experiment-catalog.md).
 
 ### Regression guardrails
 
@@ -359,6 +403,19 @@ Feature: Correct and reproducible Collatz experiments
     Then the status is invalid_input
     And no Collatz transition is attempted
 
+  Scenario: Reconstructed metadata disagreement fails verification
+    Given a syntactically valid definition whose declared bit length differs from reconstruction
+    When input validation runs
+    Then the diagnostic status is verification_failed
+    And no Collatz transition is attempted
+
+  Scenario: An excessive aggregate plan is rejected before allocation
+    Given individually valid input and control sample counts
+    And their total would exceed 16384 observations
+    When configuration validation runs
+    Then the diagnostic status is invalid_input
+    And no plan input or result vector is allocated
+
   Scenario: An exceptional result awaits independent confirmation
     Given a result that exceeds the declared candidate threshold
     When the initial run completes
@@ -386,7 +443,9 @@ Overflow, invalid input, and limits are explicit outcomes.
 ### Reproducibility
 
 Inputs are reconstructible, controls are deterministic, configurations are
-identified, results name the program commit, and large artifacts carry hashes.
+identified, results name a build-embedded and configuration-checked
+program-source SHA-256 plus dirty-source state, and large artifacts carry
+hashes.
 
 ### Auditability
 
@@ -456,8 +515,9 @@ statuses, and independent confirmation. The initial experiment plan is
 Every number carries its stable ID, family, exact formula, parameters, source,
 external identifier where relevant, retrieval date, bit length, decimal digit
 count, imported-value SHA-256 when relevant, and reconstruction information.
-Every result adds experiment/configuration/run IDs, program commit, engine
-policy, limits, format version, and validation state.
+Every result adds experiment/configuration/run IDs, build-embedded program
+source SHA-256, executable-source dirty state, engine policy, limits, format
+version, and validation state.
 
 Automatic internet ingestion is outside the MVP. External facts are entered as
 reviewed source metadata and remain distinguishable from generated values.

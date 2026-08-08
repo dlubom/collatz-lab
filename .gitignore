@@ -1,9 +1,8 @@
 # Local ASDLC knowledge base and tooling
 .asdlc/
 
-# Generated Lean dependency/build state
+# Generated Lean build state
 /lean/.lake/
-/lean/lake-manifest.json
 
 # Generated Rust build and mutation output
 /target/

@@ -10,8 +10,8 @@ and does not hold enormous integer expansions or complete large trajectories.
 - Full huge integers and full large trajectories remain outside Git.
 - Every external large artifact is represented by its filename or stable URI,
   byte size, media/format type, and SHA-256 hash.
-- Every result names its experiment ID, configuration ID, run ID, input ID, and
-  program commit.
+- Every result names its experiment ID, configuration ID, run ID, input ID,
+  build-embedded program-source SHA-256, and executable-source dirty state.
 - Every result states its engine policy, termination status, limits, and
   validation method.
 - An unusual result is labeled `needs-reproduction` until independent
@@ -35,7 +35,7 @@ Human-readable versioned summaries track only:
 - first descent below the start when observed;
 - termination status;
 - elapsed execution time;
-- program version or commit;
+- build-embedded program-source SHA-256 and executable-source dirty state;
 - validation method.
 
 The machine-readable result contract may carry additional fields required for

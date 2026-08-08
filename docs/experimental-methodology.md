@@ -24,6 +24,7 @@ Every input record must provide:
 | Stable input ID and name | Unique inside the catalog and readable by humans |
 | Family | A declared category such as `mersenne` or `manual` |
 | Construction | Exact formula plus all generator parameters |
+| Source kind | Explicitly `local` or `external` |
 | Source | Citation or URL when external; `user-supplied` when manual |
 | External ID | OEIS or database identifier when one exists |
 | Retrieval date | Required for externally obtained or changeable data |
@@ -32,17 +33,30 @@ Every input record must provide:
 | SHA-256 | Required when a value is imported rather than generated locally |
 | Reconstruction note | Enough information to rebuild the value without copying a huge decimal expansion |
 
-The constructed value must be validated against declared bit length, decimal
-digit count, and imported hash before execution. A disagreement yields
-`invalid_input` or `verification_failed`; it is not repaired silently.
+Every external source requires a retrieval date, even when no external ID
+exists. An imported value must be external and additionally requires a
+nonempty external ID and matching SHA-256. The constructed value is validated
+against declared bit length, decimal digit count, and imported hash before
+execution. Malformed structure yields `invalid_input`; disagreement with
+reconstructed metadata or hash yields `verification_failed`. Neither is
+repaired silently.
 
 ## Experiment configuration
 
 A configuration has a stable experiment ID, schema version, ordered input IDs,
 construction parameters, selected engine policy, step/time/resource limits,
 optional verified-bound reference, metric set, control specification, output
-format version, and program commit. The canonical serialized form determines a
-configuration ID by SHA-256 once serialization rules are implemented.
+format version, and expected program-source SHA-256. The expected hash must
+equal the stable content hash of the executable-source snapshot embedded during
+the build; a mismatch stops before execution. The hash is independent of commit
+identity, so squash or rebase does not invalidate an unchanged source snapshot.
+Results use the embedded value and expose whether executable-source paths had
+Git worktree changes when compiled. The canonical serialized form determines a
+configuration ID by SHA-256.
+
+Git commit identity is not part of the configuration or result contract. A
+logbook may retain it as an auxiliary locator; uncommitted executable-source
+changes are instead exposed by `program_source_dirty`.
 
 An experiment ID identifies the research question, while a configuration ID
 identifies an exact executable setup. Repeating a configuration creates a new
@@ -67,10 +81,50 @@ rules such as excluding even numbers, duplicates, or members of the target
 family must be declared before generation because each changes the control
 population. The MVP default includes both parities and rejects only duplicates
 within the control set and exact equality with its matched special value.
+Version 1 permits from 1 through 4096 controls per matched input. A larger
+request is rejected before allocation; fallible reservations convert allocation
+failure into a typed control-generation error.
+The same version permits at most 16384 total observations, computed with
+checked arithmetic as `input_count * (1 + controls_per_input)`. Plan and result
+aggregation use fallible reservations and return typed errors rather than
+relying on an infallible allocation.
 
 A recorded seed is insufficient by itself: the pseudorandom algorithm, output
 mapping, rejection order, and implementation version are also part of the
 configuration.
+
+### Version-1 deterministic mapping
+
+The implemented version-1 control contract uses `ChaCha20` from
+`rand_chacha 0.10.0` and a 32-byte lowercase-hexadecimal master seed. For every
+zero-based `(experiment ID, input ID, replicate index)` mapping, it derives the
+ChaCha seed as SHA-256 over these bytes in order:
+
+1. ASCII `collatz-lab-control-v1` followed by one zero byte;
+2. the 32 decoded master-seed bytes followed by one zero byte;
+3. UTF-8 experiment ID followed by one zero byte;
+4. UTF-8 input ID followed by one zero byte;
+5. the replicate index as an unsigned 32-bit big-endian integer.
+
+Each replicate starts its own ChaCha stream. A candidate of bit length `b`
+uses `ceil(b / 8)` stream bytes as a little-endian integer. Unused high bits in
+the final byte are cleared and the highest retained bit is set, producing a
+value in `[2^(b-1), 2^b - 1]` without modulo bias. The stream advances on a
+rejection. Version 1 admits both parities, first rejects equality with the
+matched special value, and then rejects duplicates already accepted for that
+matched value. The stable mapping name is
+`sha256-subseed-little-endian-mask-v1`; any change requires a new name and
+configuration ID.
+
+Version-1 configuration IDs are lowercase SHA-256 of compact UTF-8 JSON in
+declared struct-field order. The hashed identity document contains the
+validated configuration and the full selected validated catalog definitions
+in `input_ids` order. Construction, provenance, and declared metadata therefore
+remain identity-bearing even when an `input_id` and reconstructed value do not
+change. The identity excludes run identifiers and clock data. Canonical plans
+add reconstructed ordered controls but likewise exclude run-specific state.
+Repeating a plan therefore produces identical bytes, while executing it creates
+a distinct run ID.
 
 ## Metrics
 
@@ -102,7 +156,7 @@ whether a metric is complete, prefix-only, unavailable, or derived.
 The MVP result/logbook summary tracks only: experiment ID, input name and
 provenance, exact construction, input bit length, classical step count when
 known, peak value or bit length, first descent, termination status, elapsed
-time, program commit, and validation method. The remaining metrics may be
+time, program-source SHA-256, and validation method. The remaining metrics may be
 present in the line-oriented result schema but are not required in the first
 human summary.
 
@@ -130,12 +184,17 @@ MVP.
 | `step_limit_reached` | The step limit was reached before another terminal condition |
 | `time_limit_reached` | The declared time limit stopped execution |
 | `resource_limit_reached` | A declared memory or other resource limit stopped execution |
+| `engine_error` | The selected engine could not execute an otherwise valid input; `engine_outcome` records the precise cause |
 | `invalid_input` | The number definition or value violates the input contract |
 | `verification_failed` | Reconstruction, hash, cross-engine, or independent verification disagreed |
 
-Arithmetic overflow in the bounded reference engine is an engine outcome, not
-a successful experiment status. A reference-only run records it explicitly;
-the hybrid policy promotes before the operation and records the promotion.
+Arithmetic overflow or an out-of-range input in the bounded reference engine
+uses `engine_error`; it is an engine outcome, not a successful experiment
+status. A reference-only run records the cause explicitly; the hybrid policy
+promotes before arithmetic overflow and records the promotion. A `validated`
+research state confirms that record structure, input reconstruction, and
+provenance checks succeeded; it does not turn an `engine_error` into a completed
+trajectory.
 
 ## Safe use of a verified bound
 
@@ -162,7 +221,7 @@ is marked `needs-reproduction` in research metadata and processed in order:
 3. run the arbitrary-precision engine over the complete relevant prefix;
 4. check with an independent script or external tool that does not reuse the
    tested algorithm;
-5. preserve the complete configuration, program commit, toolchain, platform,
+5. preserve the complete configuration, program-source SHA-256, toolchain, platform,
    and relevant environment information;
 6. record SHA-256 hashes for configuration and large artifacts;
 7. perform a manual review of source provenance, step accounting, peak, and
@@ -177,10 +236,21 @@ overwritten.
 ## Reproducible reporting
 
 Every result line points to an experiment ID, configuration ID, run ID, input
-ID, program commit, engine policy, status, validation state, and format version.
+ID, build-embedded program-source SHA-256, executable-source dirty state, engine policy,
+status, validation state, and format version.
 Small text summaries may be versioned. Large values or trajectories remain
 outside Git and are represented by metadata plus SHA-256 as described in
 [`research/results/README.md`](../research/results/README.md).
+
+CLI diagnostics are not experiment termination statuses. `invalid_input`
+identifies malformed or unsupported input data, including invalid UTF-8;
+`verification_failed` identifies reconstructed metadata or provenance/hash
+disagreement; and `io_error` identifies a filesystem read or write failure,
+including an I/O error surfaced by JSON serialization. Plan and result output
+use the same mapping.
+Contradictory provenance fields, such as a local source carrying external
+retrieval metadata or an imported value declared as local, are consistency
+disagreements and therefore use `verification_failed`.
 
 Timing comparisons require the same machine description, power mode, build
 profile, toolchain, workload, warm-up policy, and competing-load notes. See

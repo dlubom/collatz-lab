@@ -29,8 +29,10 @@ The MVP uses:
 
 The accepted project baseline now includes the Lean 4 reference model, checked
 scalar `u128` execution, exact `rug::Integer` execution, safe one-way hybrid
-promotion, and a scalar Criterion baseline harness. The CLI, experiment records,
-and research results remain pending; no Collatz record is claimed.
+promotion, a scalar Criterion baseline harness, and the first reproducible
+catalog/CLI experiment slice. EXP-001 and the deliberately small EXP-002 smoke
+comparison are recorded without a Collatz record, global, causal, or
+significance claim.
 
 ## Documentation map
 

@@ -1,0 +1,80 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust quality
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --component clippy,llvm-tools-preview,rustfmt
+
+      - name: Verify host and toolchain
+        run: |
+          test "$(uname -m)" = "arm64"
+          rustc --version --verbose
+          cargo --version
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Run Rust tests
+        run: cargo test --workspace
+
+      - name: Install pinned quality tools
+        run: |
+          cargo install cargo-llvm-cov --version 0.8.7 --locked
+          cargo install cargo-mutants --version 27.1.0 --locked
+
+      - name: Report workspace coverage
+        run: cargo llvm-cov --workspace --all-features
+
+      - name: Enforce core coverage
+        run: cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90
+
+      - name: Run reference mutation gate
+        run: cargo mutants --file crates/collatz-engine/src/reference.rs
+
+  lean:
+    name: Lean quality
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build pinned Lean project
+        uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9 # v1.5.0
+        with:
+          lake-package-directory: lean
+          auto-config: false
+          build: true
+          test: false
+          lint: false
+          use-mathlib-cache: false
+          use-github-cache: false

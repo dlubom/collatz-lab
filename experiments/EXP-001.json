@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exp-001",
+  "name": "Known-value validation run",
+  "catalog_path": "catalog/inputs-v1.jsonl",
+  "input_ids": ["literal-1", "literal-2", "literal-3", "literal-27"],
+  "engine_policy": "reference",
+  "limits": {
+    "classical_step_limit": 200,
+    "time_limit_ms": null,
+    "resource_limit_bytes": null
+  },
+  "metrics": ["classical_steps", "observed_peak", "first_descent"],
+  "primary_metric": "classical_steps",
+  "controls": null,
+  "verified_bound": null,
+  "output_format_version": 1,
+  "program_source_sha256": "64aa1ef5dc7b2952990ba4fe35d90c1a40ebc65639d28e1f36beccf7cae85be5"
+}

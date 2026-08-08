@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dlubom/collatz-lab/schemas/number-definition-v1.schema.json",
+  "title": "Collatz Lab number definition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "input_id",
+    "name",
+    "family",
+    "construction",
+    "provenance",
+    "declared_bit_length",
+    "declared_decimal_digits"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "input_id": { "$ref": "#/$defs/identifier" },
+    "name": { "type": "string", "pattern": "\\S" },
+    "family": { "$ref": "#/$defs/identifier" },
+    "construction": { "$ref": "#/$defs/construction" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "declared_bit_length": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4294967295
+    },
+    "declared_decimal_digits": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4294967295
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "positiveDecimal": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "construction": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "literal" },
+            "value": { "$ref": "#/$defs/positiveDecimal" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "exponent"],
+          "properties": {
+            "kind": { "const": "mersenne" },
+            "exponent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "index"],
+          "properties": {
+            "kind": { "const": "fermat" },
+            "index": { "type": "integer", "minimum": 0, "maximum": 31 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "base", "length"],
+          "properties": {
+            "kind": { "const": "repunit" },
+            "base": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 4294967295
+            },
+            "length": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "coefficient", "exponent"],
+          "properties": {
+            "kind": { "const": "affine_power_of_two" },
+            "coefficient": { "$ref": "#/$defs/positiveDecimal" },
+            "exponent": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "source_kind",
+        "source",
+        "external_id",
+        "retrieval_date",
+        "imported_value_sha256",
+        "reconstruction_note"
+      ],
+      "properties": {
+        "origin": { "enum": ["generated", "imported"] },
+        "source_kind": { "enum": ["local", "external"] },
+        "source": { "type": "string", "pattern": "\\S" },
+        "external_id": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "\\S" }
+          ]
+        },
+        "retrieval_date": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/date" }
+          ]
+        },
+        "imported_value_sha256": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        },
+        "reconstruction_note": { "type": "string", "pattern": "\\S" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "source_kind": { "const": "local" } } },
+          "then": {
+            "properties": {
+              "external_id": { "type": "null" },
+              "retrieval_date": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "source_kind": { "const": "external" } } },
+          "then": {
+            "properties": { "retrieval_date": { "$ref": "#/$defs/date" } }
+          }
+        },
+        {
+          "if": { "properties": { "origin": { "const": "imported" } } },
+          "then": {
+            "properties": {
+              "source_kind": { "const": "external" },
+              "external_id": { "type": "string", "pattern": "\\S" },
+              "retrieval_date": { "$ref": "#/$defs/date" },
+              "imported_value_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "origin": { "const": "generated" } } },
+          "then": {
+            "properties": { "imported_value_sha256": { "type": "null" } }
+          }
+        }
+      ]
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    }
+  }
+}

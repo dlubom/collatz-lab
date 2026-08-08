@@ -1,6 +1,6 @@
 # PBI-004: Deliver the First Reproducible Experiment Catalog
 
-- **Status:** Planned; blocked on PBI-003 and dependency approval
+- **Status:** Implemented; ready for review
 - **Type:** Small vertical experiment slice
 
 ## Goal
@@ -19,11 +19,13 @@ candidate.
 
 ## Dependencies
 
-- Blocked by: PBI-003.
-- Blocked by: explicit human approval of exact pinned serialization,
-  deterministic-random, and SHA-256 dependencies. The proposed minimal set is
-  `serde`, `serde_json`, `rand_chacha`, and `sha2`; no dependency is added merely
-  because it appears here.
+- Depends on: completed PBI-003.
+- Dependency approval recorded 2026-08-08 for exact pins `serde 1.0.229`,
+  `serde_json 1.0.151`, `rand_chacha 0.10.0`, and `sha2 0.11.0`.
+- Review-fix approval recorded 2026-08-08 for the test-only Draft 2020-12
+  validator `jsonschema 0.49.7` with default features disabled.
+- Public `engine_error` status approval recorded 2026-08-08 for valid inputs
+  that the selected bounded engine cannot execute.
 - Must merge before: any non-oracle research experiment or external data import.
 
 ## Context pointers
@@ -84,7 +86,9 @@ with the approved `ChaCha20` algorithm/version and the MVP rejection policy.
 Cargo.toml
 Cargo.lock
 crates/collatz-experiments/Cargo.toml
+crates/collatz-experiments/build.rs
 crates/collatz-experiments/src/lib.rs
+crates/collatz-experiments/src/program.rs
 crates/collatz-experiments/src/number.rs
 crates/collatz-experiments/src/catalog.rs
 crates/collatz-experiments/src/controls.rs
@@ -95,9 +99,11 @@ crates/collatz-experiments/tests/catalog_contract.rs
 crates/collatz-experiments/tests/reproducibility.rs
 crates/collatz-cli/Cargo.toml
 crates/collatz-cli/src/main.rs
+crates/collatz-cli/tests/error_semantics.rs
 schemas/number-definition-v1.schema.json
 schemas/experiment-config-v1.schema.json
 schemas/result-v1.schema.json
+.github/workflows/quality.yml
 catalog/inputs-v1.jsonl
 experiments/EXP-001.json
 experiments/EXP-002.json
@@ -123,36 +129,44 @@ PBI's test/smoke runs complete and must follow its README.
 9. Run EXP-001 and the deliberately small EXP-002 smoke comparison; label any
    unusual observation `needs-reproduction` without interpreting it as a
    record.
-10. Record run IDs, commit, validation method, and concise results in the
-    logbook/result summary.
+10. Record run IDs, program-source SHA-256, executable-source dirty state,
+    validation method, and concise results in the logbook/result summary.
 
 ## Acceptance criteria
 
-- [ ] Single literal, ordered list, and each supported generator definition can
+- [x] Single literal, ordered list, and each supported generator definition can
   be validated and executed.
-- [ ] Invalid domains or inconsistent declared metadata yield `invalid_input`
-  before engine execution.
-- [ ] Every number/result carries the required provenance fields.
-- [ ] Imported values require a matching SHA-256; locally generated values are
+- [x] Invalid domains yield `invalid_input`, while reconstructed metadata or
+  provenance/hash disagreement yields `verification_failed`, before engine
+  execution.
+- [x] Every number/result carries the required provenance fields.
+- [x] Imported values require a matching SHA-256; locally generated values are
   reproducible from formula and parameters.
-- [ ] Two plans from the same configuration produce byte-identical ordered
+- [x] Two plans from the same configuration produce byte-identical ordered
   inputs and controls.
-- [ ] Every control has the matched special input's bit length and follows the
+- [x] Every control has the matched special input's bit length and follows the
   declared duplicate/equality rejection policy.
-- [ ] A seed is stored together with algorithm, version, mapping, and rejection
+- [x] A seed is stored together with algorithm, version, mapping, and rejection
   rules.
-- [ ] Rerunning one configuration keeps the configuration ID and creates a new
+- [x] Rerunning one configuration keeps the configuration ID and creates a new
   run ID.
-- [ ] Result lines distinguish complete metrics from prefix metrics and use the
+- [x] Result lines distinguish complete metrics from prefix metrics and use the
   controlled termination statuses.
-- [ ] EXP-001 reproduces the fixed known values.
-- [ ] EXP-002 is small, deterministic, and stored/reported without a global or
+- [x] The declared stable program-source SHA-256 is checked against build
+  metadata and result records never copy an unchecked configuration hash.
+- [x] Version 1 bounds controls at 4096 per input and total observations at
+  16384; checked arithmetic and fallible reservations keep allocation failures
+  typed.
+- [x] CLI filesystem failures use `io_error` consistently for input and output
+  paths instead of `invalid_input`.
+- [x] EXP-001 reproduces the fixed known values.
+- [x] EXP-002 is small, deterministic, and stored/reported without a global or
   causal claim.
-- [ ] Exceptional output is `needs-reproduction` until the documented
+- [x] Exceptional output is `needs-reproduction` until the documented
   independent procedure succeeds.
-- [ ] No large value/trajectory, network fetcher, database, or automatic
+- [x] No large value/trajectory, network fetcher, database, or automatic
   publication is introduced.
-- [ ] Rust, Lean, coverage, and reference mutation gates still pass.
+- [x] Rust, Lean, coverage, and reference mutation gates still pass.
 
 ## Deterministic verification commands
 
@@ -200,6 +214,10 @@ Expected results:
 - Result fields may conflate prefix and complete metrics.
 - The first comparison may invite post-hoc interpretation from a tiny sample.
 - A catalog source may drift or be copied without reconstruction evidence.
+- A declared program-source hash may be syntactically valid but unrelated to
+  the built executable unless build provenance is checked.
+- A bounded per-input sample count may still create an excessive total plan
+  unless the aggregate observation count is checked.
 
 ## Completion conditions
 
@@ -207,6 +225,53 @@ Dependencies are explicitly approved and pinned, schemas and behavior match the
 Spec, plans reproduce byte-for-byte, fixed examples and the small comparison run
 complete, quality gates remain green, and the logbook records actual run IDs and
 validation without overstated claims.
+
+## Closure evidence (2026-08-08)
+
+The Codex process did not inherit `~/.cargo/bin` in `PATH`, so Rust commands
+below were executed with the explicit Cargo path shown. All commands ran from
+the repository root unless a different working directory is stated.
+
+- `lake build` in `lean/` — exit `0`; 1049 jobs completed.
+- `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`.
+- `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets --all-features -- -D warnings`
+  — exit `0`; no warnings.
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 75
+  tests passed.
+- `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace --all-features`
+  — exit `0`; informational workspace line coverage `79.09%`.
+- `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90`
+  — exit `0`; core line coverage `98.47%`.
+- `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file crates/collatz-engine/src/reference.rs`
+  — exit `0`; 15 mutants tested, 12 caught, 3 unviable, zero survivors.
+- `/Users/dariuszlubomski/.cargo/bin/cargo bench --workspace --no-run` — exit
+  `0`; all benchmark targets compiled.
+- `/Users/dariuszlubomski/.cargo/bin/cargo run -p collatz-cli -- catalog validate catalog/inputs-v1.jsonl`
+  — exit `0`; exactly 10 version-1 records and zero invalid records.
+- Two `experiment plan` commands for EXP-002 followed by `cmp` — all exit `0`;
+  27 inputs, configuration ID
+  `8cfc36cb7e16c8075a3faeb1374673617e71f672221a82186a0824a8a7a302ae`,
+  and byte-identical plans with SHA-256
+  `574359007503cc9404d8986bf0465043e6195b96fa99945672693a9ff3efa472`.
+- `experiment run` for EXP-001 — exit `0`; four results reproduce steps
+  `0/1/7/111` and peaks `1/2/16/9232`.
+- `experiment run` for EXP-002 — exit `0`; 27 uniquely identified results,
+  consisting of three special values and 24 controls under one configuration
+  and run ID.
+- A direct pre/post-commit materialization confirmed that the stable
+  source-content hash remains valid when Git commit identity changes. Review
+  regressions prove that result-stream I/O remains `io_error`;
+  invalid UTF-8 remains `invalid_input`; metadata/hash mismatches remain
+  `verification_failed`; version 1 rejects more than 16384 total observations
+  before allocation; and real Draft 2020-12 validation covers the catalog,
+  configurations, results, and negative schema cases.
+- Final clean-source smoke runs accepted program-source SHA-256
+  `64aa1ef5dc7b2952990ba4fe35d90c1a40ebc65639d28e1f36beccf7cae85be5`
+  and every result reported `program_source_dirty: false`.
+- `git diff --check` — exit `0`.
+
+The reviewed research run IDs and per-observation summary are stored in
+[`research/results/2026-08-08-exp-001-exp-002.md`](../research/results/2026-08-08-exp-001-exp-002.md).
 
 ## Independent review
 

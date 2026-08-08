@@ -9,7 +9,7 @@ When an entry summarizes a run, track only the MVP human-summary fields:
 experiment ID; number name and provenance; exact formula or generator
 parameters; input bit length; classical steps to one when known; peak value or
 peak bit length; first descent when observed; termination status; elapsed time;
-program version/commit; and validation method. Rich machine records remain in
+program-source SHA-256; and validation method. Rich machine records remain in
 the versioned result format rather than expanding the logbook.
 
 ## 2026-08-02
@@ -51,6 +51,119 @@ the versioned result format rather than expanding the logbook.
 
 - Commit and publish the accepted documentation baseline. Start PBI-001 only on
   a separate implementation instruction.
+
+## 2026-08-08
+
+### Decisions
+
+- Approved and pinned `serde 1.0.229`, `serde_json 1.0.151`,
+  `rand_chacha 0.10.0`, and `sha2 0.11.0` for PBI-004.
+- Fixed the version-1 control mapping and canonical configuration/plan rules in
+  the experimental methodology; changing them requires a new version and
+  configuration ID.
+- Approved `engine_error` as the experiment status for a valid input that the
+  selected engine cannot represent or complete because of bounded arithmetic.
+- Kept full JSONL outputs outside Git and stored the small reviewable run
+  summary in [`results/2026-08-08-exp-001-exp-002.md`](results/2026-08-08-exp-001-exp-002.md).
+
+### What we checked
+
+- Validated exactly ten catalog records and zero invalid records.
+- Materialized EXP-002 twice; both 27-input plans were byte-identical with
+  SHA-256 `a1ca1ce38063e290df167481c120643736ea4adc8535ff446c21ba8dc613f54d`.
+- Reconstructed every generator family, independently pinned the first control
+  value, checked bit-length/equality/duplicate rules, compared reference,
+  BigInt, and hybrid results, and verified complete-versus-prefix labels.
+
+### Results
+
+- EXP-001 configuration
+  `cebda5db58b590b9f4be44a414d88a84ec5e99026e84315c5090570504aaa931`,
+  run
+  `run-6f4424f69e725f30c4928168a15d905c1c1c29ccc9942c87a24dd1d58157da7c`:
+  four `reached_one` records reproduced the fixed counts and peaks.
+- EXP-002 configuration
+  `04ed8e91a40539979d0333bc3dcbb540584c7610002a9ae1e34e72c4aef983bf`,
+  run
+  `run-62554f07de387828d62ede39aedc67d09e4600200884607ece91255ccb6325c3`:
+  27 `reached_one` records were written for three Mersenne values and 24
+  matched controls.
+- Program commit for both configurations was
+  `676461920e639617803342604604c337b36eb139`; build metadata reported
+  `program_source_dirty: false` for every result.
+- No candidate threshold was declared and no observation was classified as
+  exceptional. The smoke comparison supports no record, global, causal, or
+  significance claim.
+
+### Problems and errors
+
+- Initial workspace tests exposed that relative catalog paths depend on the
+  CLI working directory; integration fixtures now use explicit catalog paths
+  without changing the root-invocation CLI contract.
+- Schema-reserved time/resource limits and verified-bound execution are not
+  silently ignored; version 1 rejects non-null values until an owning PBI
+  implements them.
+- Independent review found that the first configuration-ID implementation
+  hashed selected `input_id` values without their catalog definitions. The ID
+  now also binds the selected construction, provenance, and declared metadata;
+  a regression test changes provenance without changing the numeric value.
+- Independent review also corrected the completed input `1` first-descent
+  label to `unavailable`, separated bounded-engine failures into
+  `engine_error`, and replaced a misleading Fermat-index-zero invalid-domain
+  fixture with valid `F0` and exact reconstruction-boundary coverage.
+- Follow-up PR review found three additional reproducibility/robustness gaps:
+  configuration could self-declare an unchecked program SHA, control sample
+  count was not operationally bounded, and plan-output I/O was mislabeled as
+  `invalid_input`. Build provenance, the version-1 maximum, fallible
+  reservations, and the `io_error` CLI category now close those gaps.
+- A second follow-up review found that Git commit identity was unstable across
+  the repository's squash/rebase merge methods, result-stream I/O and catalog
+  decoding had ambiguous status mappings, provenance mismatches were
+  underclassified, aggregate observation allocation remained unbounded, and
+  schemas did not encode the runtime contract. The corrected version uses
+  stable program-source SHA-256
+  `afc4d5528021b806fe8e0ba0bd17b1c7c3379bc1d1f8af5fe1ea52a1a2f445a1`,
+  explicit local/external provenance, a 16384-observation cap with fallible
+  reservations, and a real Draft 2020-12 schema validator. The same source hash
+  was accepted before and after Git commit `fa7d34e`, while the post-commit run
+  reported `program_source_dirty: false`.
+- The superseding review-fix runs use EXP-001 configuration
+  `cae8ddb1d22bf0995df41eecf35ed699a0deaa22a02418e7f44cfe2b2cc8e4ce`
+  and run
+  `run-22708e509f5cb8df86d8b867ab95a56550aa087f3a13cfbec22e40fddd3055cb`;
+  EXP-002 configuration
+  `4131b127713037360487a3096f0a4ce2511eba6abd3fca2b75c9b6f32361464a`
+  and run
+  `run-a36470f52c2c7a40bbacb772e99fc04bd6e8ce3d2e34b2e3f0b502354326db1f`.
+  Its two canonical plans were byte-identical with SHA-256
+  `5f0a56cff868ae6c3f9fe012bd9390cf43f5ad315c92f4ac1b81cc63b8ff513e`.
+- Independent review then found two remaining contract gaps: contradictory
+  provenance combinations were still underclassified, and JSON schemas did not
+  cap every Rust `u32`/`u64` field. After correcting both, the final clean-source
+  rerun supersedes the immediately preceding review-fix run. It uses
+  program-source SHA-256
+  `64aa1ef5dc7b2952990ba4fe35d90c1a40ebc65639d28e1f36beccf7cae85be5`;
+  EXP-001 configuration
+  `433e5f5b981b1bf8d83ea06268798d62a7d411f023f5627ea3572dae0a445fef`
+  and run
+  `run-0b811a0016be328d8fb30b13051eafee24270d89a38890e595703c95251213c6`;
+  EXP-002 configuration
+  `8cfc36cb7e16c8075a3faeb1374673617e71f672221a82186a0824a8a7a302ae`
+  and run
+  `run-00c9679f339d7031838547e291b0c2e19a0246911a99b1fbf72dde5c579f34b8`.
+  The final canonical plan SHA-256 is
+  `574359007503cc9404d8986bf0465043e6195b96fa99945672693a9ff3efa472`;
+  all results reported `program_source_dirty: false`.
+
+### Open questions
+
+- None for PBI-004. Any interpretation beyond this declared tiny sample needs a
+  separately preregistered experiment.
+
+### Next steps
+
+- Human review and merge remain separate. Future work may design a larger
+  Mersenne comparison without reusing this smoke run as confirmatory evidence.
 
 ## Entry template
 
