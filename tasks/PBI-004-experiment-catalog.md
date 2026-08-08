@@ -129,8 +129,8 @@ PBI's test/smoke runs complete and must follow its README.
 9. Run EXP-001 and the deliberately small EXP-002 smoke comparison; label any
    unusual observation `needs-reproduction` without interpreting it as a
    record.
-10. Record run IDs, commit, validation method, and concise results in the
-    logbook/result summary.
+10. Record run IDs, program-source SHA-256, executable-source dirty state,
+    validation method, and concise results in the logbook/result summary.
 
 ## Acceptance criteria
 
@@ -265,7 +265,7 @@ the repository root unless a different working directory is stated.
   `verification_failed`; version 1 rejects more than 16384 total observations
   before allocation; and real Draft 2020-12 validation covers the catalog,
   configurations, results, and negative schema cases.
-- Post-commit smoke runs accepted program-source SHA-256
+- Final clean-source smoke runs accepted program-source SHA-256
   `64aa1ef5dc7b2952990ba4fe35d90c1a40ebc65639d28e1f36beccf7cae85be5`
   and every result reported `program_source_dirty: false`.
 - `git diff --check` — exit `0`.

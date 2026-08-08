@@ -54,6 +54,10 @@ Results use the embedded value and expose whether executable-source paths had
 Git worktree changes when compiled. The canonical serialized form determines a
 configuration ID by SHA-256.
 
+Git commit identity is not part of the configuration or result contract. A
+logbook may retain it as an auxiliary locator; uncommitted executable-source
+changes are instead exposed by `program_source_dirty`.
+
 An experiment ID identifies the research question, while a configuration ID
 identifies an exact executable setup. Repeating a configuration creates a new
 run ID and retains the same configuration ID.

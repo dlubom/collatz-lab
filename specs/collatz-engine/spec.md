@@ -443,8 +443,9 @@ Overflow, invalid input, and limits are explicit outcomes.
 ### Reproducibility
 
 Inputs are reconstructible, controls are deterministic, configurations are
-identified, results name a build-embedded and configuration-checked program
-commit plus dirty-source state, and large artifacts carry hashes.
+identified, results name a build-embedded and configuration-checked
+program-source SHA-256 plus dirty-source state, and large artifacts carry
+hashes.
 
 ### Auditability
 

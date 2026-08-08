@@ -35,7 +35,7 @@ Human-readable versioned summaries track only:
 - first descent below the start when observed;
 - termination status;
 - elapsed execution time;
-- program version or commit;
+- build-embedded program-source SHA-256 and executable-source dirty state;
 - validation method.
 
 The machine-readable result contract may carry additional fields required for
