@@ -232,10 +232,10 @@ the repository root unless a different working directory is stated.
 - `/Users/dariuszlubomski/.cargo/bin/cargo fmt --all -- --check` — exit `0`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo clippy --workspace --all-targets --all-features -- -D warnings`
   — exit `0`; no warnings.
-- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 60
+- `/Users/dariuszlubomski/.cargo/bin/cargo test --workspace` — exit `0`; 66
   tests passed.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --workspace --all-features`
-  — exit `0`; informational workspace line coverage `75.61%`.
+  — exit `0`; informational workspace line coverage `79.70%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo llvm-cov --package collatz-engine --lib --all-features --fail-under-lines 90`
   — exit `0`; core line coverage `98.47%`.
 - `/Users/dariuszlubomski/.cargo/bin/cargo mutants --file crates/collatz-engine/src/reference.rs`
@@ -244,14 +244,18 @@ the repository root unless a different working directory is stated.
   — exit `0`; exactly 10 version-1 records and zero invalid records.
 - Two `experiment plan` commands for EXP-002 followed by `cmp` — all exit `0`;
   27 inputs, configuration ID
-  `4bb88941efdbdb3e52acff0f09cae270fa7ab2c06c68cb519de7a44c9cbc0a33`,
+  `04ed8e91a40539979d0333bc3dcbb540584c7610002a9ae1e34e72c4aef983bf`,
   and byte-identical plans with SHA-256
-  `ca3f63790035706d5f3b25771d2f7d0a279e5a4b493ce0927f25ff4293e6edd1`.
+  `a1ca1ce38063e290df167481c120643736ea4adc8535ff446c21ba8dc613f54d`.
 - `experiment run` for EXP-001 — exit `0`; four results reproduce steps
   `0/1/7/111` and peaks `1/2/16/9232`.
 - `experiment run` for EXP-002 — exit `0`; 27 uniquely identified results,
   consisting of three special values and 24 controls under one configuration
   and run ID.
+- Review regressions prove that configurations cannot claim a commit different
+  from the built program, version 1 rejects more than 4096 controls before
+  allocation, result provenance comes from build metadata, and plan/run output
+  failures share the public `io_error` category.
 - `git diff --check` — exit `0`.
 
 The reviewed research run IDs and per-observation summary are stored in
