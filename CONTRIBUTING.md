@@ -51,6 +51,7 @@ is pushed only when explicitly requested and must be labeled as such.
 | `.githooks/pre-commit` | Rejects commits made while `main` or `master` is checked out. |
 | `.githooks/pre-push` | Rejects any push whose destination is remote `main` or `master`, including `HEAD:main`. |
 | `Repository policy` workflow | Tests the tracked hook behavior on every PR and every update to `main`. |
+| `Quality` workflow | Runs the pinned Lean build and the full Rust format, Clippy, test, coverage, and reference-mutation gates on macOS Apple Silicon. |
 | GitHub `Protect main` ruleset | Requires a PR, an up-to-date passing `Repository policy` check, resolved conversations, and linear history; prevents force pushes and deletion; and has no bypass entries. |
 
 Client-side hooks are an early safety net, not the security boundary: Git can

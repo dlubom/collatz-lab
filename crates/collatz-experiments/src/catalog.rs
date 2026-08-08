@@ -107,7 +107,13 @@ pub enum CatalogError {
 
 impl CatalogError {
     pub const fn status_code(&self) -> &'static str {
-        "invalid_input"
+        match self {
+            Self::Io { .. } => "io_error",
+            Self::Json { .. }
+            | Self::BlankLine { .. }
+            | Self::InvalidDefinition { .. }
+            | Self::DuplicateInputId { .. } => "invalid_input",
+        }
     }
 }
 

@@ -65,7 +65,11 @@
       ]
     },
     "output_format_version": { "const": 1 },
-    "program_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+    "program_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Expected executable-source commit; materialization rejects a value that differs from the commit embedded in the built program."
+    }
   },
   "$defs": {
     "identifier": {
@@ -90,7 +94,7 @@
         "algorithm": { "const": "chacha20" },
         "algorithm_version": { "const": "rand_chacha-0.10.0" },
         "seed_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "samples_per_input": { "type": "integer", "minimum": 1 },
+        "samples_per_input": { "type": "integer", "minimum": 1, "maximum": 4096 },
         "mapping_version": { "const": "sha256-subseed-little-endian-mask-v1" },
         "rejection_policy": {
           "type": "object",

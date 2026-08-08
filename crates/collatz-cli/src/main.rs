@@ -45,7 +45,7 @@ fn execute(arguments: Vec<OsString>) -> Result<String, String> {
             let plan = materialize_configuration(configuration)
                 .map_err(|error| format!("{}: {error}", error.status_code()))?;
             plan.write(output)
-                .map_err(|error| format!("invalid_input: {error}"))?;
+                .map_err(|error| format!("{}: {error}", error.status_code()))?;
             Ok(format!(
                 "plan materialized: configuration_id={}, inputs={}",
                 plan.configuration_id,

@@ -84,7 +84,9 @@ with the approved `ChaCha20` algorithm/version and the MVP rejection policy.
 Cargo.toml
 Cargo.lock
 crates/collatz-experiments/Cargo.toml
+crates/collatz-experiments/build.rs
 crates/collatz-experiments/src/lib.rs
+crates/collatz-experiments/src/program.rs
 crates/collatz-experiments/src/number.rs
 crates/collatz-experiments/src/catalog.rs
 crates/collatz-experiments/src/controls.rs
@@ -95,9 +97,11 @@ crates/collatz-experiments/tests/catalog_contract.rs
 crates/collatz-experiments/tests/reproducibility.rs
 crates/collatz-cli/Cargo.toml
 crates/collatz-cli/src/main.rs
+crates/collatz-cli/tests/error_semantics.rs
 schemas/number-definition-v1.schema.json
 schemas/experiment-config-v1.schema.json
 schemas/result-v1.schema.json
+.github/workflows/quality.yml
 catalog/inputs-v1.jsonl
 experiments/EXP-001.json
 experiments/EXP-002.json
@@ -145,6 +149,12 @@ PBI's test/smoke runs complete and must follow its README.
   run ID.
 - [x] Result lines distinguish complete metrics from prefix metrics and use the
   controlled termination statuses.
+- [x] The declared program commit is checked against build metadata and result
+  records never copy an unchecked configuration SHA.
+- [x] Version 1 bounds controls at 4096 per input and allocation failures remain
+  typed rather than aborting through an unchecked reservation.
+- [x] CLI filesystem failures use `io_error` consistently for input and output
+  paths instead of `invalid_input`.
 - [x] EXP-001 reproduces the fixed known values.
 - [x] EXP-002 is small, deterministic, and stored/reported without a global or
   causal claim.
@@ -200,6 +210,10 @@ Expected results:
 - Result fields may conflate prefix and complete metrics.
 - The first comparison may invite post-hoc interpretation from a tiny sample.
 - A catalog source may drift or be copied without reconstruction evidence.
+- A declared program SHA may be syntactically valid but unrelated to the built
+  executable unless build provenance is checked.
+- An unbounded sample request may exhaust memory before a typed error is
+  returned.
 
 ## Completion conditions
 

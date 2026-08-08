@@ -1,6 +1,6 @@
 # Collatz Lab Architecture
 
-- **Status:** Accepted baseline; PBI-001 through PBI-003 implemented
+- **Status:** Accepted baseline; PBI-001 through PBI-004 implemented
 - **Date:** 2026-08-02
 - **Phase:** Incremental MVP implementation
 
@@ -187,7 +187,9 @@ The MVP data flow is:
 4. create deterministic matched controls from a declared algorithm and seed;
 5. execute every input under the same declared engine policy and limits;
 6. serialize one versioned result record per observation;
-7. retain configuration and hashes needed for reproduction.
+7. verify the declared program commit against build-embedded executable-source
+   provenance and retain dirty-source state;
+8. retain configuration and hashes needed for reproduction.
 
 Large values and trajectories remain outside Git. Small summaries and metadata
 point to large artifacts by SHA-256. No automatic network download or record

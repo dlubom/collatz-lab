@@ -102,6 +102,13 @@ impl ExperimentConfiguration {
             });
         }
         validate_commit(&self.program_commit)?;
+        let built_commit = crate::program_commit();
+        if self.program_commit != built_commit {
+            return Err(ExperimentConfigError::ProgramCommitMismatch {
+                declared: self.program_commit.clone(),
+                built: built_commit.into(),
+            });
+        }
         Ok(())
     }
 
@@ -354,6 +361,10 @@ pub enum ExperimentConfigError {
     InvalidProgramCommit {
         value: String,
     },
+    ProgramCommitMismatch {
+        declared: String,
+        built: String,
+    },
     CatalogInputMissing {
         input_id: String,
     },
@@ -401,11 +412,25 @@ impl fmt::Display for ExperimentConfigError {
                     "program_commit must be 40 lowercase hex digits: {value}"
                 )
             }
+            Self::ProgramCommitMismatch { declared, built } => write!(
+                formatter,
+                "configured program_commit {declared} does not match built program commit {built}"
+            ),
             Self::CatalogInputMissing { input_id } => {
                 write!(formatter, "catalog does not contain input_id {input_id}")
             }
             Self::SelectedDefinitionsMismatch => formatter
                 .write_str("selected input definitions do not match configured input_ids in order"),
+        }
+    }
+}
+
+impl ExperimentConfigError {
+    pub const fn status_code(&self) -> &'static str {
+        match self {
+            Self::Io { .. } => "io_error",
+            Self::ProgramCommitMismatch { .. } => "verification_failed",
+            _ => "invalid_input",
         }
     }
 }

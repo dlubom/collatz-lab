@@ -13,6 +13,7 @@ use crate::{NumberConstruction, NumberDefinition, Provenance, ValidatedNumber, V
 pub const CHACHA20_ALGORITHM: &str = "chacha20";
 pub const CHACHA20_ALGORITHM_VERSION: &str = "rand_chacha-0.10.0";
 pub const CONTROL_MAPPING_VERSION: &str = "sha256-subseed-little-endian-mask-v1";
+pub const MAX_SAMPLES_PER_INPUT_V1: u32 = 4096;
 
 /// Complete deterministic control-generation configuration.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -41,6 +42,12 @@ impl ControlSpecification {
         )?;
         if self.samples_per_input == 0 {
             return Err(ControlError::ZeroSampleSize);
+        }
+        if self.samples_per_input > MAX_SAMPLES_PER_INPUT_V1 {
+            return Err(ControlError::SampleSizeTooLarge {
+                requested: self.samples_per_input,
+                maximum: MAX_SAMPLES_PER_INPUT_V1,
+            });
         }
         if self.rejection_policy != RejectionPolicy::mvp_default() {
             return Err(ControlError::UnsupportedRejectionPolicy);
@@ -100,7 +107,20 @@ pub fn generate_controls(
         .and_then(|bits| bits.checked_sub(bit_length as usize))
         .ok_or(ControlError::BitLengthTooLarge { bit_length })?;
     let mut accepted = HashSet::new();
-    let mut controls = Vec::with_capacity(specification.samples_per_input as usize);
+    let requested = specification.samples_per_input as usize;
+    accepted
+        .try_reserve(requested)
+        .map_err(|_| ControlError::AllocationFailed {
+            context: "accepted control set",
+            requested,
+        })?;
+    let mut controls = Vec::new();
+    controls
+        .try_reserve_exact(requested)
+        .map_err(|_| ControlError::AllocationFailed {
+            context: "control result vector",
+            requested,
+        })?;
 
     for replicate_index in 0..specification.samples_per_input {
         let subseed = control_subseed(
@@ -112,7 +132,14 @@ pub fn generate_controls(
         let mut rng = ChaCha20Rng::from_seed(subseed);
 
         let value = loop {
-            let mut bytes = vec![0_u8; byte_length];
+            let mut bytes = Vec::new();
+            bytes
+                .try_reserve_exact(byte_length)
+                .map_err(|_| ControlError::AllocationFailed {
+                    context: "control candidate bytes",
+                    requested: byte_length,
+                })?;
+            bytes.resize(byte_length, 0);
             rng.fill_bytes(&mut bytes);
             let most_significant = bytes
                 .last_mut()
@@ -190,6 +217,10 @@ pub enum ControlError {
     },
     InvalidSeed,
     ZeroSampleSize,
+    SampleSizeTooLarge {
+        requested: u32,
+        maximum: u32,
+    },
     UnsupportedRejectionPolicy,
     ControlSpaceExhausted {
         bit_length: u32,
@@ -198,6 +229,10 @@ pub enum ControlError {
     },
     BitLengthTooLarge {
         bit_length: u32,
+    },
+    AllocationFailed {
+        context: &'static str,
+        requested: usize,
     },
     GeneratedDefinitionInvalid {
         source: crate::NumberValidationError,
@@ -217,6 +252,10 @@ impl fmt::Display for ControlError {
             ),
             Self::InvalidSeed => formatter.write_str("seed_hex must be 64 lowercase hex digits"),
             Self::ZeroSampleSize => formatter.write_str("samples_per_input must be at least 1"),
+            Self::SampleSizeTooLarge { requested, maximum } => write!(
+                formatter,
+                "samples_per_input {requested} exceeds the version-1 maximum {maximum}"
+            ),
             Self::UnsupportedRejectionPolicy => {
                 formatter.write_str("control rejection policy is not the declared MVP policy")
             }
@@ -234,6 +273,10 @@ impl fmt::Display for ControlError {
                     "control bit length {bit_length} is not addressable"
                 )
             }
+            Self::AllocationFailed { context, requested } => write!(
+                formatter,
+                "cannot reserve {requested} elements for {context}"
+            ),
             Self::GeneratedDefinitionInvalid { source } => {
                 write!(formatter, "generated control failed validation: {source}")
             }

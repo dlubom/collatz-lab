@@ -24,6 +24,7 @@
     "elapsed_nanoseconds",
     "promotion_count",
     "program_commit",
+    "program_source_dirty",
     "validation_state",
     "validation_method"
   ],
@@ -86,6 +87,10 @@
     "elapsed_nanoseconds": { "type": "integer", "minimum": 0 },
     "promotion_count": { "type": "integer", "minimum": 0, "maximum": 1 },
     "program_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "program_source_dirty": {
+      "type": "boolean",
+      "description": "Whether executable-source paths differed from program_commit when the program was built."
+    },
     "validation_state": {
       "enum": ["validated", "needs_reproduction", "verification_failed"]
     },

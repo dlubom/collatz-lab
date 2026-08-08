@@ -194,6 +194,19 @@ fn all_three_version_one_schemas_are_reviewable_json_documents() {
 }
 
 #[test]
+fn experiment_schema_pins_the_version_one_control_sample_maximum() {
+    let bytes = std::fs::read(repository_path("schemas/experiment-config-v1.schema.json"))
+        .expect("schema file is readable");
+    let schema: serde_json::Value =
+        serde_json::from_slice(&bytes).expect("schema file is valid JSON");
+
+    assert_eq!(
+        schema["$defs"]["controls"]["properties"]["samples_per_input"]["maximum"],
+        4096
+    );
+}
+
+#[test]
 fn serde_rejects_unknown_definition_fields() {
     let line = r#"{
         "schema_version":1,

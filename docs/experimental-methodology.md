@@ -41,8 +41,11 @@ digit count, and imported hash before execution. A disagreement yields
 A configuration has a stable experiment ID, schema version, ordered input IDs,
 construction parameters, selected engine policy, step/time/resource limits,
 optional verified-bound reference, metric set, control specification, output
-format version, and program commit. The canonical serialized form determines a
-configuration ID by SHA-256 once serialization rules are implemented.
+format version, and expected program commit. The expected commit must equal the
+executable-source commit embedded during the build; a mismatch stops before
+execution. Results use the embedded value and expose whether executable-source
+paths were dirty when compiled. The canonical serialized form determines a
+configuration ID by SHA-256.
 
 An experiment ID identifies the research question, while a configuration ID
 identifies an exact executable setup. Repeating a configuration creates a new
@@ -67,6 +70,9 @@ rules such as excluding even numbers, duplicates, or members of the target
 family must be declared before generation because each changes the control
 population. The MVP default includes both parities and rejects only duplicates
 within the control set and exact equality with its matched special value.
+Version 1 permits from 1 through 4096 controls per matched input. A larger
+request is rejected before allocation; fallible reservations convert allocation
+failure into a typed control-generation error.
 
 A recorded seed is insufficient by itself: the pseudorandom algorithm, output
 mapping, rejection order, and implementation version are also part of the
@@ -215,10 +221,16 @@ overwritten.
 ## Reproducible reporting
 
 Every result line points to an experiment ID, configuration ID, run ID, input
-ID, program commit, engine policy, status, validation state, and format version.
+ID, build-embedded program commit, executable-source dirty state, engine policy,
+status, validation state, and format version.
 Small text summaries may be versioned. Large values or trajectories remain
 outside Git and are represented by metadata plus SHA-256 as described in
 [`research/results/README.md`](../research/results/README.md).
+
+CLI diagnostics are not experiment termination statuses. `invalid_input`
+identifies malformed or unsupported input data, `verification_failed`
+identifies a consistency/provenance disagreement, and `io_error` identifies a
+filesystem read or write failure. Plan and result output use the same mapping.
 
 Timing comparisons require the same machine description, power mode, build
 profile, toolchain, workload, warm-up policy, and competing-load notes. See

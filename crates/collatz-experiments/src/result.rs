@@ -27,6 +27,7 @@ pub struct ResultRecord {
     pub elapsed_nanoseconds: u64,
     pub promotion_count: u8,
     pub program_commit: String,
+    pub program_source_dirty: bool,
     pub validation_state: ValidationState,
     pub validation_method: String,
 }

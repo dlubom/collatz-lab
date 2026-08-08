@@ -3,10 +3,11 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use collatz_experiments::{
-    Catalog, ControlSpecification, EngineOutcome, EnginePolicy, ExperimentConfiguration,
-    ExperimentStatus, InputRole, MetricCompleteness, NumberConstruction, NumberDefinition,
-    Provenance, RejectionPolicy, ValidatedNumber, ValidationState, ValueOrigin, generate_controls,
-    run_configuration,
+    Catalog, ControlError, ControlSpecification, EngineOutcome, EnginePolicy,
+    ExperimentConfigError, ExperimentConfiguration, ExperimentStatus, InputRole,
+    MAX_SAMPLES_PER_INPUT_V1, MetricCompleteness, NumberConstruction, NumberDefinition, Provenance,
+    RejectionPolicy, ValidatedNumber, ValidationState, ValueOrigin, generate_controls,
+    program_commit, program_source_dirty, run_configuration,
 };
 use proptest::prelude::*;
 
@@ -112,6 +113,30 @@ fn exp002_plan_is_byte_identical_and_pins_the_first_control_word() {
 }
 
 #[test]
+fn configuration_rejects_a_program_commit_not_embedded_in_the_build() {
+    let catalog = reviewed_catalog();
+    let mut configuration = load_configuration("experiments/EXP-001.json");
+    configuration.program_commit = "0".repeat(40);
+
+    assert!(matches!(
+        configuration.materialize(&catalog),
+        Err(ExperimentConfigError::ProgramCommitMismatch { declared, built })
+            if declared == "0".repeat(40) && built == program_commit()
+    ));
+}
+
+#[test]
+fn results_take_program_provenance_from_the_built_library() {
+    let configuration_path = runnable_fixture("experiments/EXP-001.json");
+    let run = run_configuration(configuration_path.path()).expect("EXP-001 succeeds");
+
+    assert!(run.records.iter().all(|record| {
+        record.program_commit == program_commit()
+            && record.program_source_dirty == program_source_dirty()
+    }));
+}
+
+#[test]
 fn configuration_identity_binds_selected_catalog_definitions() {
     let catalog = reviewed_catalog();
     let configuration = load_configuration("experiments/EXP-001.json");
@@ -182,6 +207,24 @@ fn every_control_matches_bits_and_obeys_equality_and_duplicate_rejections() {
         );
     }
     assert_eq!(matched_values.values().map(HashSet::len).sum::<usize>(), 24);
+}
+
+#[test]
+fn version_one_rejects_an_unbounded_control_sample_before_allocation() {
+    let catalog = reviewed_catalog();
+    let special = catalog.get("mersenne-13").expect("fixture input exists");
+    let mut specification = load_configuration("experiments/EXP-002.json")
+        .controls
+        .expect("fixture controls exist");
+    specification.samples_per_input = MAX_SAMPLES_PER_INPUT_V1 + 1;
+
+    assert_eq!(
+        generate_controls("exp-002", special, &specification),
+        Err(ControlError::SampleSizeTooLarge {
+            requested: MAX_SAMPLES_PER_INPUT_V1 + 1,
+            maximum: MAX_SAMPLES_PER_INPUT_V1,
+        })
+    );
 }
 
 #[test]

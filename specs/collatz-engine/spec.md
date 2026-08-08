@@ -152,6 +152,11 @@ Configuration includes ordered inputs, schema version, engine policy, limits,
 metrics, optional verified-bound reference, deterministic control algorithm and
 seed, output version, and program commit.
 
+The declared program commit must equal the executable-source commit embedded by
+the build. Results copy the embedded value rather than trusting configuration
+text and also state whether executable-source paths were dirty at build time.
+A mismatch is rejected before execution as `verification_failed`.
+
 The default comparison control matches each special input's bit length and uses
 a comparable declared sample size. Algorithm, version, seed, mapping, and
 rejection rules are stored so controls can be regenerated exactly.
@@ -160,6 +165,8 @@ Version 1 pins `ChaCha20` from `rand_chacha 0.10.0`, the mapping name
 `sha256-subseed-little-endian-mask-v1`, both-parity sampling, and
 equality-before-duplicate rejection. The byte-level mapping is authoritative in
 [`docs/experimental-methodology.md`](../../docs/experimental-methodology.md).
+Version 1 accepts at most 4096 controls per matched input and rejects a larger
+request before allocation.
 Configuration IDs hash canonical validated configuration JSON together with
 the selected validated catalog definitions in configured order. This binds the
 identity to construction, provenance, and declared metadata rather than only
@@ -172,6 +179,8 @@ The MVP writes one versioned JSONL-compatible record per observation. A record
 contains identifiers, reconstructed input metadata, engine policy, limits,
 termination status, completed counts, complete or prefix-labeled metrics,
 timing, promotion count, program commit, and validation state.
+The program commit comes from build metadata; `program_source_dirty` makes an
+uncommitted executable-source build explicit.
 
 Allowed experiment statuses are `reached_one`, `reached_verified_bound`,
 `step_limit_reached`, `time_limit_reached`, `resource_limit_reached`,
@@ -189,6 +198,12 @@ The PBI-004 runner executes classical step limits through reference, BigInt,
 or hybrid policy. Version-1 schema fields and result statuses reserve verified
 bounds plus time and resource limits, but a non-null unsupported limit is
 rejected before execution rather than ignored.
+
+CLI diagnostic codes are separate from experiment termination statuses.
+Malformed definitions/configurations use `invalid_input`, consistency or
+provenance disagreement uses `verification_failed`, and filesystem failures use
+`io_error` for catalog reads, configuration reads, plan writes, and result
+writes.
 
 ### Formal verification boundary
 
@@ -405,7 +420,8 @@ Overflow, invalid input, and limits are explicit outcomes.
 ### Reproducibility
 
 Inputs are reconstructible, controls are deterministic, configurations are
-identified, results name the program commit, and large artifacts carry hashes.
+identified, results name a build-embedded and configuration-checked program
+commit plus dirty-source state, and large artifacts carry hashes.
 
 ### Auditability
 
@@ -475,8 +491,9 @@ statuses, and independent confirmation. The initial experiment plan is
 Every number carries its stable ID, family, exact formula, parameters, source,
 external identifier where relevant, retrieval date, bit length, decimal digit
 count, imported-value SHA-256 when relevant, and reconstruction information.
-Every result adds experiment/configuration/run IDs, program commit, engine
-policy, limits, format version, and validation state.
+Every result adds experiment/configuration/run IDs, build-embedded program
+commit, executable-source dirty state, engine policy, limits, format version,
+and validation state.
 
 Automatic internet ingestion is outside the MVP. External facts are entered as
 reviewed source metadata and remain distinguishable from generated values.

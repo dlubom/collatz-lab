@@ -176,7 +176,8 @@ fn execute_input(
         last_value: observation.last_value,
         elapsed_nanoseconds,
         promotion_count: observation.promotion_count,
-        program_commit: plan.configuration.program_commit.clone(),
+        program_commit: crate::program_commit().into(),
+        program_source_dirty: crate::program_source_dirty(),
         validation_state: observation.validation_state,
         validation_method: "catalog-reconstruction-v1; declared-engine-policy-v1".into(),
     }
@@ -400,10 +401,15 @@ pub enum RunnerError {
 impl RunnerError {
     pub const fn status_code(&self) -> &'static str {
         match self {
-            Self::Configuration(_) | Self::Catalog(_) | Self::InvalidPlannedInput(_) => {
-                "invalid_input"
-            }
-            _ => "verification_failed",
+            Self::Configuration(source) => source.status_code(),
+            Self::Catalog(source) => source.status_code(),
+            Self::InvalidPlannedInput(_) => "invalid_input",
+            Self::Io { .. } => "io_error",
+            Self::PlanValueMismatch { .. }
+            | Self::PlanSchemaVersion { .. }
+            | Self::ConfigurationIdMismatch { .. }
+            | Self::TooManyInputs
+            | Self::Json { .. } => "verification_failed",
         }
     }
 }

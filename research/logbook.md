@@ -110,6 +110,11 @@ the versioned result format rather than expanding the logbook.
   label to `unavailable`, separated bounded-engine failures into
   `engine_error`, and replaced a misleading Fermat-index-zero invalid-domain
   fixture with valid `F0` and exact reconstruction-boundary coverage.
+- Follow-up PR review found three additional reproducibility/robustness gaps:
+  configuration could self-declare an unchecked program SHA, control sample
+  count was not operationally bounded, and plan-output I/O was mislabeled as
+  `invalid_input`. Build provenance, the version-1 maximum, fallible
+  reservations, and the `io_error` CLI category now close those gaps.
 
 ### Open questions
 
