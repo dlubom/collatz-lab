@@ -8,7 +8,10 @@ use rug::integer::Order;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::{NumberConstruction, NumberDefinition, Provenance, ValidatedNumber, ValueOrigin};
+use crate::{
+    NumberConstruction, NumberDefinition, Provenance, ProvenanceSource, ValidatedNumber,
+    ValueOrigin,
+};
 
 pub const CHACHA20_ALGORITHM: &str = "chacha20";
 pub const CHACHA20_ALGORITHM_VERSION: &str = "rand_chacha-0.10.0";
@@ -178,6 +181,7 @@ pub fn generate_controls(
             },
             provenance: Provenance {
                 origin: ValueOrigin::Generated,
+                source_kind: ProvenanceSource::Local,
                 source: "Collatz Lab deterministic control generator".into(),
                 external_id: None,
                 retrieval_date: None,

@@ -37,23 +37,32 @@ impl RunOutput {
             source,
         })?;
         let mut writer = BufWriter::new(file);
-        for record in &self.records {
-            serde_json::to_writer(&mut writer, record).map_err(|source| RunnerError::Json {
-                context: "result record".into(),
-                message: source.to_string(),
-            })?;
-            writer.write_all(b"\n").map_err(|source| RunnerError::Io {
-                operation: "write",
-                path: path.to_path_buf(),
-                source,
-            })?;
-        }
+        write_records_jsonl(&mut writer, &self.records, path)?;
         writer.flush().map_err(|source| RunnerError::Io {
             operation: "flush",
             path: path.to_path_buf(),
             source,
         })
     }
+}
+
+fn write_records_jsonl(
+    writer: &mut impl Write,
+    records: &[ResultRecord],
+    path: &Path,
+) -> Result<(), RunnerError> {
+    for record in records {
+        serde_json::to_writer(&mut *writer, record).map_err(|source| RunnerError::Json {
+            context: "result record".into(),
+            source,
+        })?;
+        writer.write_all(b"\n").map_err(|source| RunnerError::Io {
+            operation: "write",
+            path: path.to_path_buf(),
+            source,
+        })?;
+    }
+    Ok(())
 }
 
 /// Loads and materializes one configuration using its declared catalog.
@@ -80,7 +89,13 @@ pub fn run_configuration(configuration_path: impl AsRef<Path>) -> Result<RunOutp
 fn execute_plan(plan: ExperimentPlan) -> Result<RunOutput, RunnerError> {
     validate_plan(&plan)?;
     let run_id = create_run_id(&plan.configuration_id);
-    let mut records = Vec::with_capacity(plan.inputs.len());
+    let mut records = Vec::new();
+    records
+        .try_reserve_exact(plan.inputs.len())
+        .map_err(|_| RunnerError::AllocationFailed {
+            context: "result records",
+            requested: plan.inputs.len(),
+        })?;
 
     for (index, input) in plan.inputs.iter().enumerate() {
         let validated = ValidatedNumber::validate(input.definition.clone())
@@ -115,12 +130,30 @@ fn validate_plan(plan: &ExperimentPlan) -> Result<(), RunnerError> {
             found: plan.schema_version,
         });
     }
-    let selected_definitions: Vec<_> = plan
-        .inputs
-        .iter()
-        .filter(|input| input.role == crate::InputRole::Special)
-        .map(|input| input.definition.clone())
-        .collect();
+    let expected_observations = plan
+        .configuration
+        .expected_observation_count()
+        .map_err(RunnerError::Configuration)?;
+    if plan.inputs.len() != expected_observations {
+        return Err(RunnerError::PlanObservationCountMismatch {
+            declared: plan.inputs.len(),
+            expected: expected_observations,
+        });
+    }
+    let selected_count = plan.configuration.input_ids.len();
+    let mut selected_definitions = Vec::new();
+    selected_definitions
+        .try_reserve_exact(selected_count)
+        .map_err(|_| RunnerError::AllocationFailed {
+            context: "plan special definitions",
+            requested: selected_count,
+        })?;
+    selected_definitions.extend(
+        plan.inputs
+            .iter()
+            .filter(|input| input.role == crate::InputRole::Special)
+            .map(|input| input.definition.clone()),
+    );
     let expected_id = plan
         .configuration
         .configuration_id_for_definitions(&selected_definitions)
@@ -176,7 +209,7 @@ fn execute_input(
         last_value: observation.last_value,
         elapsed_nanoseconds,
         promotion_count: observation.promotion_count,
-        program_commit: crate::program_commit().into(),
+        program_source_sha256: crate::program_source_sha256().into(),
         program_source_dirty: crate::program_source_dirty(),
         validation_state: observation.validation_state,
         validation_method: "catalog-reconstruction-v1; declared-engine-policy-v1".into(),
@@ -386,10 +419,18 @@ pub enum RunnerError {
         declared: String,
         actual: String,
     },
+    PlanObservationCountMismatch {
+        declared: usize,
+        expected: usize,
+    },
     TooManyInputs,
     Json {
         context: String,
-        message: String,
+        source: serde_json::Error,
+    },
+    AllocationFailed {
+        context: &'static str,
+        requested: usize,
     },
     Io {
         operation: &'static str,
@@ -399,16 +440,19 @@ pub enum RunnerError {
 }
 
 impl RunnerError {
-    pub const fn status_code(&self) -> &'static str {
+    pub fn status_code(&self) -> &'static str {
         match self {
             Self::Configuration(source) => source.status_code(),
             Self::Catalog(source) => source.status_code(),
-            Self::InvalidPlannedInput(_) => "invalid_input",
+            Self::InvalidPlannedInput(source) => source.status_code(),
             Self::Io { .. } => "io_error",
+            Self::Json { source, .. } if source.is_io() => "io_error",
             Self::PlanValueMismatch { .. }
             | Self::PlanSchemaVersion { .. }
             | Self::ConfigurationIdMismatch { .. }
+            | Self::PlanObservationCountMismatch { .. }
             | Self::TooManyInputs
+            | Self::AllocationFailed { .. }
             | Self::Json { .. } => "verification_failed",
         }
     }
@@ -437,11 +481,21 @@ impl fmt::Display for RunnerError {
                 formatter,
                 "configuration ID mismatch: declared {declared}, reconstructed {actual}"
             ),
+            Self::PlanObservationCountMismatch { declared, expected } => write!(
+                formatter,
+                "plan observation count mismatch: contains {declared}, expected {expected}"
+            ),
             Self::TooManyInputs => {
                 formatter.write_str("plan has more inputs than result IDs support")
             }
-            Self::Json { context, message } => {
-                write!(formatter, "cannot serialize {context}: {message}")
+            Self::Json { context, source } => {
+                write!(formatter, "cannot serialize {context}: {source}")
+            }
+            Self::AllocationFailed { context, requested } => {
+                write!(
+                    formatter,
+                    "cannot reserve {requested} entries for {context}"
+                )
             }
             Self::Io {
                 operation,
@@ -458,8 +512,93 @@ impl std::error::Error for RunnerError {
             Self::Configuration(source) => Some(source),
             Self::Catalog(source) => Some(source),
             Self::InvalidPlannedInput(source) => Some(source),
+            Self::Json { source, .. } => Some(source),
             Self::Io { source, .. } => Some(source),
             _ => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+
+    use super::*;
+
+    struct BrokenWriter;
+
+    impl Write for BrokenWriter {
+        fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "closed reader"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn serde_json_writer_failures_preserve_the_io_status() {
+        let mut writer = BrokenWriter;
+        let error =
+            write_records_jsonl(&mut writer, &[fixture_record()], Path::new("results.jsonl"))
+                .expect_err("broken result stream must fail");
+
+        assert_eq!(error.status_code(), "io_error");
+        assert!(matches!(error, RunnerError::Json { source, .. } if source.is_io()));
+    }
+
+    fn fixture_record() -> ResultRecord {
+        ResultRecord {
+            schema_version: crate::result::RESULT_SCHEMA_VERSION,
+            result_id: format!("result-{}", "0".repeat(64)),
+            experiment_id: "fixture".into(),
+            configuration_id: "0".repeat(64),
+            run_id: format!("run-{}", "0".repeat(64)),
+            observation_index: 0,
+            input: crate::result::ResultInput {
+                role: crate::InputRole::Special,
+                matched_special_input_id: None,
+                replicate_index: None,
+                definition: crate::NumberDefinition {
+                    schema_version: crate::NUMBER_DEFINITION_SCHEMA_VERSION,
+                    input_id: "literal-1".into(),
+                    name: "One".into(),
+                    family: "manual".into(),
+                    construction: crate::NumberConstruction::Literal { value: "1".into() },
+                    provenance: crate::Provenance {
+                        origin: crate::ValueOrigin::Generated,
+                        source_kind: crate::ProvenanceSource::Local,
+                        source: "fixture".into(),
+                        external_id: None,
+                        retrieval_date: None,
+                        imported_value_sha256: None,
+                        reconstruction_note: "fixture".into(),
+                    },
+                    declared_bit_length: 1,
+                    declared_decimal_digits: 1,
+                },
+                decimal_value: "1".into(),
+            },
+            engine_policy: crate::EnginePolicy::Reference,
+            limits: crate::ExperimentLimits {
+                classical_step_limit: 0,
+                time_limit_ms: None,
+                resource_limit_bytes: None,
+            },
+            status: crate::ExperimentStatus::ReachedOne,
+            engine_outcome: crate::EngineOutcome::Completed,
+            completed_classical_steps: 0,
+            classical_steps_to_one: crate::LabeledMetric::complete(Some(0)),
+            observed_peak: crate::LabeledMetric::complete(Some("1".into())),
+            first_descent: crate::LabeledMetric::unavailable(),
+            last_value: Some("1".into()),
+            elapsed_nanoseconds: 0,
+            promotion_count: 0,
+            program_source_sha256: "0".repeat(64),
+            program_source_dirty: false,
+            validation_state: crate::ValidationState::Validated,
+            validation_method: "fixture".into(),
         }
     }
 }

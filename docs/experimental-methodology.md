@@ -24,6 +24,7 @@ Every input record must provide:
 | Stable input ID and name | Unique inside the catalog and readable by humans |
 | Family | A declared category such as `mersenne` or `manual` |
 | Construction | Exact formula plus all generator parameters |
+| Source kind | Explicitly `local` or `external` |
 | Source | Citation or URL when external; `user-supplied` when manual |
 | External ID | OEIS or database identifier when one exists |
 | Retrieval date | Required for externally obtained or changeable data |
@@ -32,19 +33,25 @@ Every input record must provide:
 | SHA-256 | Required when a value is imported rather than generated locally |
 | Reconstruction note | Enough information to rebuild the value without copying a huge decimal expansion |
 
-The constructed value must be validated against declared bit length, decimal
-digit count, and imported hash before execution. A disagreement yields
-`invalid_input` or `verification_failed`; it is not repaired silently.
+Every external source requires a retrieval date, even when no external ID
+exists. An imported value must be external and additionally requires a
+nonempty external ID and matching SHA-256. The constructed value is validated
+against declared bit length, decimal digit count, and imported hash before
+execution. Malformed structure yields `invalid_input`; disagreement with
+reconstructed metadata or hash yields `verification_failed`. Neither is
+repaired silently.
 
 ## Experiment configuration
 
 A configuration has a stable experiment ID, schema version, ordered input IDs,
 construction parameters, selected engine policy, step/time/resource limits,
 optional verified-bound reference, metric set, control specification, output
-format version, and expected program commit. The expected commit must equal the
-executable-source commit embedded during the build; a mismatch stops before
-execution. Results use the embedded value and expose whether executable-source
-paths were dirty when compiled. The canonical serialized form determines a
+format version, and expected program-source SHA-256. The expected hash must
+equal the stable content hash of the executable-source snapshot embedded during
+the build; a mismatch stops before execution. The hash is independent of commit
+identity, so squash or rebase does not invalidate an unchanged source snapshot.
+Results use the embedded value and expose whether executable-source paths had
+Git worktree changes when compiled. The canonical serialized form determines a
 configuration ID by SHA-256.
 
 An experiment ID identifies the research question, while a configuration ID
@@ -73,6 +80,10 @@ within the control set and exact equality with its matched special value.
 Version 1 permits from 1 through 4096 controls per matched input. A larger
 request is rejected before allocation; fallible reservations convert allocation
 failure into a typed control-generation error.
+The same version permits at most 16384 total observations, computed with
+checked arithmetic as `input_count * (1 + controls_per_input)`. Plan and result
+aggregation use fallible reservations and return typed errors rather than
+relying on an infallible allocation.
 
 A recorded seed is insufficient by itself: the pseudorandom algorithm, output
 mapping, rejection order, and implementation version are also part of the
@@ -141,7 +152,7 @@ whether a metric is complete, prefix-only, unavailable, or derived.
 The MVP result/logbook summary tracks only: experiment ID, input name and
 provenance, exact construction, input bit length, classical step count when
 known, peak value or bit length, first descent, termination status, elapsed
-time, program commit, and validation method. The remaining metrics may be
+time, program-source SHA-256, and validation method. The remaining metrics may be
 present in the line-oriented result schema but are not required in the first
 human summary.
 
@@ -206,7 +217,7 @@ is marked `needs-reproduction` in research metadata and processed in order:
 3. run the arbitrary-precision engine over the complete relevant prefix;
 4. check with an independent script or external tool that does not reuse the
    tested algorithm;
-5. preserve the complete configuration, program commit, toolchain, platform,
+5. preserve the complete configuration, program-source SHA-256, toolchain, platform,
    and relevant environment information;
 6. record SHA-256 hashes for configuration and large artifacts;
 7. perform a manual review of source provenance, step accounting, peak, and
@@ -221,16 +232,18 @@ overwritten.
 ## Reproducible reporting
 
 Every result line points to an experiment ID, configuration ID, run ID, input
-ID, build-embedded program commit, executable-source dirty state, engine policy,
+ID, build-embedded program-source SHA-256, executable-source dirty state, engine policy,
 status, validation state, and format version.
 Small text summaries may be versioned. Large values or trajectories remain
 outside Git and are represented by metadata plus SHA-256 as described in
 [`research/results/README.md`](../research/results/README.md).
 
 CLI diagnostics are not experiment termination statuses. `invalid_input`
-identifies malformed or unsupported input data, `verification_failed`
-identifies a consistency/provenance disagreement, and `io_error` identifies a
-filesystem read or write failure. Plan and result output use the same mapping.
+identifies malformed or unsupported input data, including invalid UTF-8;
+`verification_failed` identifies reconstructed metadata or provenance/hash
+disagreement; and `io_error` identifies a filesystem read or write failure,
+including an I/O error surfaced by JSON serialization. Plan and result output
+use the same mapping.
 
 Timing comparisons require the same machine description, power mode, build
 profile, toolchain, workload, warm-up policy, and competing-load notes. See

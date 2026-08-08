@@ -13,7 +13,8 @@ pub mod runner;
 pub use catalog::{Catalog, CatalogError};
 pub use config::{
     EXPERIMENT_CONFIG_SCHEMA_VERSION, EnginePolicy, ExperimentConfigError, ExperimentConfiguration,
-    ExperimentLimits, ExperimentPlan, InputRole, MetricName, PlannedInput, VerifiedBoundReference,
+    ExperimentLimits, ExperimentPlan, InputRole, MAX_OBSERVATIONS_V1, MetricName, PlannedInput,
+    VerifiedBoundReference,
 };
 pub use controls::{
     CHACHA20_ALGORITHM, CHACHA20_ALGORITHM_VERSION, CONTROL_MAPPING_VERSION, ControlError,
@@ -21,10 +22,10 @@ pub use controls::{
     RejectionPolicy, generate_controls,
 };
 pub use number::{
-    NUMBER_DEFINITION_SCHEMA_VERSION, NumberConstruction, NumberDefinition, NumberValidationError,
-    Provenance, ValidatedNumber, ValueOrigin,
+    MAX_FERMAT_INDEX_V1, NUMBER_DEFINITION_SCHEMA_VERSION, NumberConstruction, NumberDefinition,
+    NumberValidationError, Provenance, ProvenanceSource, ValidatedNumber, ValueOrigin,
 };
-pub use program::{program_commit, program_source_dirty};
+pub use program::{program_source_dirty, program_source_sha256};
 pub use result::{
     EngineOutcome, ExperimentStatus, LabeledMetric, MetricCompleteness, ResultRecord,
     ValidationState,

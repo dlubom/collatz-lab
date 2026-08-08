@@ -135,14 +135,16 @@ The MVP recognizes:
 - a positive decimal integer literal;
 - an ordered list of accepted definitions;
 - Mersenne `2^p - 1`, with `p >= 1`;
-- Fermat `2^(2^k) + 1`, with `k >= 0`;
+- Fermat `2^(2^k) + 1`, with `0 <= k <= 31` in schema version 1;
 - repunit `(b^d - 1)/(b - 1)`, with `b >= 2`, `d >= 1`;
 - `a * 2^m - 1`, with `a >= 1`, `m >= 1`.
 
 Each definition carries a stable ID, name, family, exact construction and
-parameters, source metadata, external ID if relevant, retrieval date when
-external, derived bit length and decimal digits, and an imported-value SHA-256
-when applicable. Unsupported or internally inconsistent definitions are
+parameters, an explicit local-or-external source kind, source metadata,
+external ID if relevant, retrieval date for every external source, derived bit
+length and decimal digits, and an imported-value SHA-256 when applicable.
+Imported values require external provenance, a nonempty external ID, a date,
+and a matching hash. Unsupported or internally inconsistent definitions are
 rejected rather than guessed.
 
 ### Experiment configuration and controls
@@ -150,12 +152,15 @@ rejected rather than guessed.
 Every experiment has a stable experiment ID and an exact configuration ID.
 Configuration includes ordered inputs, schema version, engine policy, limits,
 metrics, optional verified-bound reference, deterministic control algorithm and
-seed, output version, and program commit.
+seed, output version, and program-source SHA-256.
 
-The declared program commit must equal the executable-source commit embedded by
-the build. Results copy the embedded value rather than trusting configuration
-text and also state whether executable-source paths were dirty at build time.
-A mismatch is rejected before execution as `verification_failed`.
+The declared program-source SHA-256 must equal the stable content hash embedded
+by the build. The hash covers the sorted executable-source paths and file bytes
+under a versioned domain separator, so commit rewriting by squash or rebase does
+not change it when the source snapshot is unchanged. Results copy the embedded
+value rather than trusting configuration text and also state whether those
+paths had Git worktree changes at build time. A mismatch is rejected before
+execution as `verification_failed`.
 
 The default comparison control matches each special input's bit length and uses
 a comparable declared sample size. Algorithm, version, seed, mapping, and
@@ -165,8 +170,10 @@ Version 1 pins `ChaCha20` from `rand_chacha 0.10.0`, the mapping name
 `sha256-subseed-little-endian-mask-v1`, both-parity sampling, and
 equality-before-duplicate rejection. The byte-level mapping is authoritative in
 [`docs/experimental-methodology.md`](../../docs/experimental-methodology.md).
-Version 1 accepts at most 4096 controls per matched input and rejects a larger
-request before allocation.
+Version 1 accepts at most 4096 controls per matched input and at most 16384
+total observations, where the total is
+`input_count * (1 + controls_per_input)`. Checked arithmetic and fallible
+reservations reject an excessive or unallocatable plan before generation.
 Configuration IDs hash canonical validated configuration JSON together with
 the selected validated catalog definitions in configured order. This binds the
 identity to construction, provenance, and declared metadata rather than only
@@ -178,9 +185,10 @@ materialization is byte-identical.
 The MVP writes one versioned JSONL-compatible record per observation. A record
 contains identifiers, reconstructed input metadata, engine policy, limits,
 termination status, completed counts, complete or prefix-labeled metrics,
-timing, promotion count, program commit, and validation state.
-The program commit comes from build metadata; `program_source_dirty` makes an
-uncommitted executable-source build explicit.
+timing, promotion count, program-source SHA-256, and validation state.
+The program-source SHA-256 comes from build metadata;
+`program_source_dirty` makes Git worktree changes to executable sources
+explicit. A metric labeled `unavailable` always carries a null value.
 
 Allowed experiment statuses are `reached_one`, `reached_verified_bound`,
 `step_limit_reached`, `time_limit_reached`, `resource_limit_reached`,
@@ -200,10 +208,10 @@ bounds plus time and resource limits, but a non-null unsupported limit is
 rejected before execution rather than ignored.
 
 CLI diagnostic codes are separate from experiment termination statuses.
-Malformed definitions/configurations use `invalid_input`, consistency or
-provenance disagreement uses `verification_failed`, and filesystem failures use
-`io_error` for catalog reads, configuration reads, plan writes, and result
-writes.
+Malformed definitions/configurations, including invalid UTF-8 content, use
+`invalid_input`; reconstructed metadata or provenance/hash disagreement uses
+`verification_failed`; and filesystem failures use `io_error` for catalog
+reads, configuration reads, plan writes, and every stage of result writes.
 
 ### Formal verification boundary
 
@@ -393,6 +401,19 @@ Feature: Correct and reproducible Collatz experiments
     Then the status is invalid_input
     And no Collatz transition is attempted
 
+  Scenario: Reconstructed metadata disagreement fails verification
+    Given a syntactically valid definition whose declared bit length differs from reconstruction
+    When input validation runs
+    Then the diagnostic status is verification_failed
+    And no Collatz transition is attempted
+
+  Scenario: An excessive aggregate plan is rejected before allocation
+    Given individually valid input and control sample counts
+    And their total would exceed 16384 observations
+    When configuration validation runs
+    Then the diagnostic status is invalid_input
+    And no plan input or result vector is allocated
+
   Scenario: An exceptional result awaits independent confirmation
     Given a result that exceeds the declared candidate threshold
     When the initial run completes
@@ -492,8 +513,8 @@ Every number carries its stable ID, family, exact formula, parameters, source,
 external identifier where relevant, retrieval date, bit length, decimal digit
 count, imported-value SHA-256 when relevant, and reconstruction information.
 Every result adds experiment/configuration/run IDs, build-embedded program
-commit, executable-source dirty state, engine policy, limits, format version,
-and validation state.
+source SHA-256, executable-source dirty state, engine policy, limits, format
+version, and validation state.
 
 Automatic internet ingestion is outside the MVP. External facts are entered as
 reviewed source metadata and remain distinguishable from generated values.

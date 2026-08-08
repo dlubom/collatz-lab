@@ -14,6 +14,7 @@ use crate::{
 pub const EXPERIMENT_CONFIG_SCHEMA_VERSION: u32 = 1;
 pub const EXPERIMENT_PLAN_SCHEMA_VERSION: u32 = 1;
 pub const RESULT_FORMAT_VERSION: u32 = 1;
+pub const MAX_OBSERVATIONS_V1: usize = 16_384;
 
 /// An exact, versioned experiment setup before materialization.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -31,7 +32,7 @@ pub struct ExperimentConfiguration {
     pub controls: Option<ControlSpecification>,
     pub verified_bound: Option<VerifiedBoundReference>,
     pub output_format_version: u32,
-    pub program_commit: String,
+    pub program_source_sha256: String,
 }
 
 impl ExperimentConfiguration {
@@ -62,7 +63,14 @@ impl ExperimentConfiguration {
         if self.input_ids.is_empty() {
             return Err(ExperimentConfigError::EmptyInputs);
         }
+        self.expected_observation_count()?;
         let mut input_ids = HashSet::new();
+        input_ids.try_reserve(self.input_ids.len()).map_err(|_| {
+            ExperimentConfigError::AllocationFailed {
+                context: "configured input identifiers",
+                requested: self.input_ids.len(),
+            }
+        })?;
         for input_id in &self.input_ids {
             validate_identifier("input_id", input_id)?;
             if !input_ids.insert(input_id) {
@@ -75,6 +83,12 @@ impl ExperimentConfiguration {
             return Err(ExperimentConfigError::EmptyMetrics);
         }
         let mut metrics = HashSet::new();
+        metrics.try_reserve(self.metrics.len()).map_err(|_| {
+            ExperimentConfigError::AllocationFailed {
+                context: "configured metrics",
+                requested: self.metrics.len(),
+            }
+        })?;
         for metric in &self.metrics {
             if !metrics.insert(*metric) {
                 return Err(ExperimentConfigError::DuplicateMetric { metric: *metric });
@@ -101,23 +115,53 @@ impl ExperimentConfiguration {
                 found: self.output_format_version,
             });
         }
-        validate_commit(&self.program_commit)?;
-        let built_commit = crate::program_commit();
-        if self.program_commit != built_commit {
-            return Err(ExperimentConfigError::ProgramCommitMismatch {
-                declared: self.program_commit.clone(),
-                built: built_commit.into(),
+        validate_sha256(&self.program_source_sha256)?;
+        let built_source_sha256 = crate::program_source_sha256();
+        if self.program_source_sha256 != built_source_sha256 {
+            return Err(ExperimentConfigError::ProgramSourceSha256Mismatch {
+                declared: self.program_source_sha256.clone(),
+                built: built_source_sha256.into(),
             });
         }
         Ok(())
     }
 
+    pub(crate) fn expected_observation_count(&self) -> Result<usize, ExperimentConfigError> {
+        let controls_per_input = self
+            .controls
+            .as_ref()
+            .map_or(0, |controls| controls.samples_per_input as usize);
+        let observations_per_input = controls_per_input
+            .checked_add(1)
+            .ok_or(ExperimentConfigError::ObservationCountOverflow)?;
+        let requested = self
+            .input_ids
+            .len()
+            .checked_mul(observations_per_input)
+            .ok_or(ExperimentConfigError::ObservationCountOverflow)?;
+        if requested > MAX_OBSERVATIONS_V1 {
+            return Err(ExperimentConfigError::TooManyObservations {
+                requested,
+                maximum: MAX_OBSERVATIONS_V1,
+            });
+        }
+        Ok(requested)
+    }
+
     pub fn configuration_id(&self, catalog: &Catalog) -> Result<String, ExperimentConfigError> {
         let selected_numbers = self.selected_numbers(catalog)?;
-        let selected_definitions: Vec<_> = selected_numbers
-            .iter()
-            .map(|number| number.definition().clone())
-            .collect();
+        let mut selected_definitions = Vec::new();
+        selected_definitions
+            .try_reserve_exact(selected_numbers.len())
+            .map_err(|_| ExperimentConfigError::AllocationFailed {
+                context: "selected input definitions",
+                requested: selected_numbers.len(),
+            })?;
+        selected_definitions.extend(
+            selected_numbers
+                .iter()
+                .map(|number| number.definition().clone()),
+        );
         self.configuration_id_for_definitions(&selected_definitions)
     }
 
@@ -149,12 +193,27 @@ impl ExperimentConfiguration {
 
     pub fn materialize(&self, catalog: &Catalog) -> Result<ExperimentPlan, ExperimentConfigError> {
         let special_numbers = self.selected_numbers(catalog)?;
-        let selected_definitions: Vec<_> = special_numbers
-            .iter()
-            .map(|number| number.definition().clone())
-            .collect();
+        let mut selected_definitions = Vec::new();
+        selected_definitions
+            .try_reserve_exact(special_numbers.len())
+            .map_err(|_| ExperimentConfigError::AllocationFailed {
+                context: "selected input definitions",
+                requested: special_numbers.len(),
+            })?;
+        selected_definitions.extend(
+            special_numbers
+                .iter()
+                .map(|number| number.definition().clone()),
+        );
         let configuration_id = self.configuration_id_for_definitions(&selected_definitions)?;
+        let observation_count = self.expected_observation_count()?;
         let mut inputs = Vec::new();
+        inputs.try_reserve_exact(observation_count).map_err(|_| {
+            ExperimentConfigError::AllocationFailed {
+                context: "experiment plan inputs",
+                requested: observation_count,
+            }
+        })?;
 
         for number in &special_numbers {
             inputs.push(PlannedInput::special(
@@ -185,16 +244,21 @@ impl ExperimentConfiguration {
         catalog: &'a Catalog,
     ) -> Result<Vec<&'a ValidatedNumber>, ExperimentConfigError> {
         self.validate()?;
-        self.input_ids
-            .iter()
-            .map(|input_id| {
-                catalog
-                    .get(input_id)
-                    .ok_or_else(|| ExperimentConfigError::CatalogInputMissing {
-                        input_id: input_id.clone(),
-                    })
-            })
-            .collect()
+        let mut selected = Vec::new();
+        selected
+            .try_reserve_exact(self.input_ids.len())
+            .map_err(|_| ExperimentConfigError::AllocationFailed {
+                context: "selected catalog inputs",
+                requested: self.input_ids.len(),
+            })?;
+        for input_id in &self.input_ids {
+            selected.push(catalog.get(input_id).ok_or_else(|| {
+                ExperimentConfigError::CatalogInputMissing {
+                    input_id: input_id.clone(),
+                }
+            })?);
+        }
+        Ok(selected)
     }
 }
 
@@ -358,12 +422,21 @@ pub enum ExperimentConfigError {
     InvalidControls(ControlError),
     VerifiedBoundNotExecutable,
     OperationalLimitNotExecutable,
-    InvalidProgramCommit {
+    InvalidProgramSourceSha256 {
         value: String,
     },
-    ProgramCommitMismatch {
+    ProgramSourceSha256Mismatch {
         declared: String,
         built: String,
+    },
+    ObservationCountOverflow,
+    TooManyObservations {
+        requested: usize,
+        maximum: usize,
+    },
+    AllocationFailed {
+        context: &'static str,
+        requested: usize,
     },
     CatalogInputMissing {
         input_id: String,
@@ -406,15 +479,26 @@ impl fmt::Display for ExperimentConfigError {
             Self::OperationalLimitNotExecutable => formatter.write_str(
                 "time and resource limits are schema-reserved but not executable in PBI-004",
             ),
-            Self::InvalidProgramCommit { value } => {
+            Self::InvalidProgramSourceSha256 { value } => {
                 write!(
                     formatter,
-                    "program_commit must be 40 lowercase hex digits: {value}"
+                    "program_source_sha256 must be 64 lowercase hex digits: {value}"
                 )
             }
-            Self::ProgramCommitMismatch { declared, built } => write!(
+            Self::ProgramSourceSha256Mismatch { declared, built } => write!(
                 formatter,
-                "configured program_commit {declared} does not match built program commit {built}"
+                "configured program_source_sha256 {declared} does not match built program source SHA-256 {built}"
+            ),
+            Self::ObservationCountOverflow => {
+                formatter.write_str("total observation count exceeds the platform size")
+            }
+            Self::TooManyObservations { requested, maximum } => write!(
+                formatter,
+                "total observation count {requested} exceeds the version-1 maximum {maximum}"
+            ),
+            Self::AllocationFailed { context, requested } => write!(
+                formatter,
+                "cannot reserve {requested} entries for {context}"
             ),
             Self::CatalogInputMissing { input_id } => {
                 write!(formatter, "catalog does not contain input_id {input_id}")
@@ -429,7 +513,7 @@ impl ExperimentConfigError {
     pub const fn status_code(&self) -> &'static str {
         match self {
             Self::Io { .. } => "io_error",
-            Self::ProgramCommitMismatch { .. } => "verification_failed",
+            Self::ProgramSourceSha256Mismatch { .. } => "verification_failed",
             _ => "invalid_input",
         }
     }
@@ -471,13 +555,13 @@ fn validate_nonempty(field: &'static str, value: &str) -> Result<(), ExperimentC
     }
 }
 
-fn validate_commit(value: &str) -> Result<(), ExperimentConfigError> {
-    if value.len() != 40
+fn validate_sha256(value: &str) -> Result<(), ExperimentConfigError> {
+    if value.len() != 64
         || !value
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
     {
-        Err(ExperimentConfigError::InvalidProgramCommit {
+        Err(ExperimentConfigError::InvalidProgramSourceSha256 {
             value: value.into(),
         })
     } else {

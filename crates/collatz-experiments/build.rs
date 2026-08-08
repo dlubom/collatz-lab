@@ -1,6 +1,9 @@
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+
+use sha2::{Digest, Sha256};
 
 const PROGRAM_PATHS: &[&str] = &[
     "Cargo.toml",
@@ -39,23 +42,103 @@ fn emit_program_provenance() -> Result<(), String> {
     }
     emit_git_rerun_paths(&repository_root)?;
 
-    let mut commit_arguments = vec!["log", "-1", "--format=%H", "--"];
-    commit_arguments.extend_from_slice(PROGRAM_PATHS);
-    let commit = run_git(&repository_root, &commit_arguments)?;
-    if commit.len() != 40
-        || !commit
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    {
-        return Err(format!("git returned invalid program commit {commit}"));
-    }
+    let source_sha256 = program_source_sha256(&repository_root)?;
 
     let mut status_arguments = vec!["status", "--porcelain=v1", "--untracked-files=normal", "--"];
     status_arguments.extend_from_slice(PROGRAM_PATHS);
     let source_dirty = !run_git(&repository_root, &status_arguments)?.is_empty();
 
-    println!("cargo:rustc-env=COLLATZ_PROGRAM_COMMIT={commit}");
+    println!("cargo:rustc-env=COLLATZ_PROGRAM_SOURCE_SHA256={source_sha256}");
     println!("cargo:rustc-env=COLLATZ_PROGRAM_SOURCE_DIRTY={source_dirty}");
+    Ok(())
+}
+
+fn program_source_sha256(repository_root: &Path) -> Result<String, String> {
+    let mut files = Vec::new();
+    for relative_path in PROGRAM_PATHS {
+        collect_program_files(repository_root, Path::new(relative_path), &mut files)?;
+    }
+    files.sort();
+    files.dedup();
+
+    let mut hasher = Sha256::new();
+    hasher.update(b"collatz-lab-program-source-v1\0");
+    for relative_path in files {
+        let normalized_path = relative_path
+            .to_str()
+            .ok_or_else(|| {
+                format!(
+                    "program source path is not UTF-8: {}",
+                    relative_path.display()
+                )
+            })?
+            .replace('\\', "/");
+        let bytes = fs::read(repository_root.join(&relative_path)).map_err(|error| {
+            format!(
+                "cannot read program source {}: {error}",
+                relative_path.display()
+            )
+        })?;
+        hasher.update(
+            u64::try_from(normalized_path.len())
+                .map_err(|_| "program source path is too long".to_owned())?
+                .to_be_bytes(),
+        );
+        hasher.update(normalized_path.as_bytes());
+        hasher.update(
+            u64::try_from(bytes.len())
+                .map_err(|_| "program source file is too large".to_owned())?
+                .to_be_bytes(),
+        );
+        hasher.update(bytes);
+    }
+
+    let digest = hasher.finalize();
+    let mut output = String::with_capacity(64);
+    for byte in digest {
+        use std::fmt::Write as _;
+        let _ = write!(output, "{byte:02x}");
+    }
+    Ok(output)
+}
+
+fn collect_program_files(
+    repository_root: &Path,
+    relative_path: &Path,
+    files: &mut Vec<PathBuf>,
+) -> Result<(), String> {
+    let path = repository_root.join(relative_path);
+    let metadata = fs::symlink_metadata(&path)
+        .map_err(|error| format!("cannot inspect program source {}: {error}", path.display()))?;
+    if metadata.file_type().is_symlink() {
+        return Err(format!(
+            "program source path must not be a symbolic link: {}",
+            relative_path.display()
+        ));
+    }
+    if metadata.is_file() {
+        files.push(relative_path.to_path_buf());
+        return Ok(());
+    }
+    if !metadata.is_dir() {
+        return Err(format!(
+            "program source path is neither a file nor a directory: {}",
+            relative_path.display()
+        ));
+    }
+
+    let mut children = fs::read_dir(&path)
+        .map_err(|error| format!("cannot list program source {}: {error}", path.display()))?
+        .map(|entry| {
+            entry
+                .map(|entry| relative_path.join(entry.file_name()))
+                .map_err(|error| format!("cannot list program source {}: {error}", path.display()))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    children.sort();
+    for child in children {
+        collect_program_files(repository_root, &child, files)?;
+    }
     Ok(())
 }
 

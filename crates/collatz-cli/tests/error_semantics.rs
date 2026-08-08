@@ -42,6 +42,12 @@ fn assert_io_error(output: Output) {
     assert!(!stderr.starts_with("invalid_input:"), "{stderr}");
 }
 
+fn assert_status(output: Output, expected: &str) {
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8(output.stderr).expect("stderr is UTF-8");
+    assert!(stderr.starts_with(&format!("{expected}: ")), "{stderr}");
+}
+
 #[test]
 fn plan_and_run_output_failures_share_the_io_error_category() {
     for (action, configuration, suffix) in [
@@ -117,4 +123,44 @@ fn catalog_missing_through_configuration_is_io_error() {
     ]));
 
     std::fs::remove_file(configuration).expect("temporary configuration can be removed");
+}
+
+#[test]
+fn invalid_catalog_encoding_is_invalid_input() {
+    let catalog = temporary_file("invalid-utf8.jsonl");
+    std::fs::write(&catalog, [0xff, b'\n']).expect("invalid UTF-8 fixture writes");
+
+    assert_status(
+        run(&[
+            "catalog",
+            "validate",
+            catalog.to_str().expect("temporary path is UTF-8"),
+        ]),
+        "invalid_input",
+    );
+    std::fs::remove_file(catalog).expect("temporary catalog can be removed");
+}
+
+#[test]
+fn reconstructed_metadata_disagreement_is_verification_failed() {
+    let catalog = temporary_file("metadata-mismatch.jsonl");
+    let source = std::fs::read_to_string(repository_root().join("catalog/inputs-v1.jsonl"))
+        .expect("reviewed catalog can be read");
+    let mismatched = source.replacen(
+        "\"declared_bit_length\":1,\"declared_decimal_digits\":1",
+        "\"declared_bit_length\":2,\"declared_decimal_digits\":1",
+        1,
+    );
+    assert_ne!(mismatched, source, "metadata fixture must be replaced");
+    std::fs::write(&catalog, mismatched).expect("temporary catalog can be written");
+
+    assert_status(
+        run(&[
+            "catalog",
+            "validate",
+            catalog.to_str().expect("temporary path is UTF-8"),
+        ]),
+        "verification_failed",
+    );
+    std::fs::remove_file(catalog).expect("temporary catalog can be removed");
 }

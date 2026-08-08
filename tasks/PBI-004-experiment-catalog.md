@@ -22,6 +22,8 @@ candidate.
 - Depends on: completed PBI-003.
 - Dependency approval recorded 2026-08-08 for exact pins `serde 1.0.229`,
   `serde_json 1.0.151`, `rand_chacha 0.10.0`, and `sha2 0.11.0`.
+- Review-fix approval recorded 2026-08-08 for the test-only Draft 2020-12
+  validator `jsonschema 0.49.7` with default features disabled.
 - Public `engine_error` status approval recorded 2026-08-08 for valid inputs
   that the selected bounded engine cannot execute.
 - Must merge before: any non-oracle research experiment or external data import.
@@ -134,8 +136,9 @@ PBI's test/smoke runs complete and must follow its README.
 
 - [x] Single literal, ordered list, and each supported generator definition can
   be validated and executed.
-- [x] Invalid domains or inconsistent declared metadata yield `invalid_input`
-  before engine execution.
+- [x] Invalid domains yield `invalid_input`, while reconstructed metadata or
+  provenance/hash disagreement yields `verification_failed`, before engine
+  execution.
 - [x] Every number/result carries the required provenance fields.
 - [x] Imported values require a matching SHA-256; locally generated values are
   reproducible from formula and parameters.
@@ -149,10 +152,11 @@ PBI's test/smoke runs complete and must follow its README.
   run ID.
 - [x] Result lines distinguish complete metrics from prefix metrics and use the
   controlled termination statuses.
-- [x] The declared program commit is checked against build metadata and result
-  records never copy an unchecked configuration SHA.
-- [x] Version 1 bounds controls at 4096 per input and allocation failures remain
-  typed rather than aborting through an unchecked reservation.
+- [x] The declared stable program-source SHA-256 is checked against build
+  metadata and result records never copy an unchecked configuration hash.
+- [x] Version 1 bounds controls at 4096 per input and total observations at
+  16384; checked arithmetic and fallible reservations keep allocation failures
+  typed.
 - [x] CLI filesystem failures use `io_error` consistently for input and output
   paths instead of `invalid_input`.
 - [x] EXP-001 reproduces the fixed known values.
@@ -210,10 +214,10 @@ Expected results:
 - Result fields may conflate prefix and complete metrics.
 - The first comparison may invite post-hoc interpretation from a tiny sample.
 - A catalog source may drift or be copied without reconstruction evidence.
-- A declared program SHA may be syntactically valid but unrelated to the built
-  executable unless build provenance is checked.
-- An unbounded sample request may exhaust memory before a typed error is
-  returned.
+- A declared program-source hash may be syntactically valid but unrelated to
+  the built executable unless build provenance is checked.
+- A bounded per-input sample count may still create an excessive total plan
+  unless the aggregate observation count is checked.
 
 ## Completion conditions
 

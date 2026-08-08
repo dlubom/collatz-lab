@@ -23,7 +23,7 @@
     "last_value",
     "elapsed_nanoseconds",
     "promotion_count",
-    "program_commit",
+    "program_source_sha256",
     "program_source_dirty",
     "validation_state",
     "validation_method"
@@ -86,10 +86,10 @@
     "last_value": { "type": ["string", "null"], "pattern": "^[1-9][0-9]*$" },
     "elapsed_nanoseconds": { "type": "integer", "minimum": 0 },
     "promotion_count": { "type": "integer", "minimum": 0, "maximum": 1 },
-    "program_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "program_source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "program_source_dirty": {
       "type": "boolean",
-      "description": "Whether executable-source paths differed from program_commit when the program was built."
+      "description": "Whether executable-source paths had Git worktree changes when the program was built."
     },
     "validation_state": {
       "enum": ["validated", "needs_reproduction", "verification_failed"]
@@ -105,7 +105,13 @@
       "properties": {
         "completeness": { "$ref": "#/$defs/completeness" },
         "value": { "type": ["integer", "null"], "minimum": 0 }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "completeness": { "const": "unavailable" } } },
+          "then": { "properties": { "value": { "type": "null" } } }
+        }
+      ]
     },
     "decimalMetric": {
       "type": "object",
@@ -114,7 +120,13 @@
       "properties": {
         "completeness": { "$ref": "#/$defs/completeness" },
         "value": { "type": ["string", "null"], "pattern": "^[1-9][0-9]*$" }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "completeness": { "const": "unavailable" } } },
+          "then": { "properties": { "value": { "type": "null" } } }
+        }
+      ]
     }
   }
 }

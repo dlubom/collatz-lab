@@ -23,7 +23,7 @@ a mathematical claim and is never used as an acceptance oracle.
 
 Every reported comparison records:
 
-- program commit and dirty-worktree state;
+- program-source SHA-256 and dirty-worktree state;
 - Rust, Cargo, `rug`, GMP, and Criterion versions;
 - macOS version, Apple Silicon model, core count, and memory;
 - power source/mode and relevant thermal or competing-load notes;

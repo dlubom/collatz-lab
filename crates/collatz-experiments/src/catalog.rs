@@ -24,10 +24,16 @@ impl Catalog {
 
         for (index, line) in BufReader::new(file).lines().enumerate() {
             let line_number = index + 1;
-            let line = line.map_err(|source| CatalogError::Io {
-                operation: "read",
-                path: path.to_path_buf(),
-                source,
+            let line = line.map_err(|source| {
+                if source.kind() == std::io::ErrorKind::InvalidData {
+                    CatalogError::InvalidEncoding { line: line_number }
+                } else {
+                    CatalogError::Io {
+                        operation: "read",
+                        path: path.to_path_buf(),
+                        source,
+                    }
+                }
             })?;
             if line.trim().is_empty() {
                 return Err(CatalogError::BlankLine { line: line_number });
@@ -36,6 +42,12 @@ impl Catalog {
                 line: line_number,
                 message: source.to_string(),
             })?;
+            definitions
+                .try_reserve(1)
+                .map_err(|_| CatalogError::AllocationFailed {
+                    context: "catalog definitions",
+                    requested: definitions.len().saturating_add(1),
+                })?;
             definitions.push(definition);
         }
 
@@ -44,7 +56,19 @@ impl Catalog {
 
     pub fn from_definitions(definitions: Vec<NumberDefinition>) -> Result<Self, CatalogError> {
         let mut identifiers = HashSet::new();
-        let mut entries = Vec::with_capacity(definitions.len());
+        identifiers
+            .try_reserve(definitions.len())
+            .map_err(|_| CatalogError::AllocationFailed {
+                context: "catalog identifiers",
+                requested: definitions.len(),
+            })?;
+        let mut entries = Vec::new();
+        entries.try_reserve_exact(definitions.len()).map_err(|_| {
+            CatalogError::AllocationFailed {
+                context: "catalog entries",
+                requested: definitions.len(),
+            }
+        })?;
 
         for (index, definition) in definitions.into_iter().enumerate() {
             let line = index + 1;
@@ -96,6 +120,9 @@ pub enum CatalogError {
     BlankLine {
         line: usize,
     },
+    InvalidEncoding {
+        line: usize,
+    },
     InvalidDefinition {
         line: usize,
         source: NumberValidationError,
@@ -103,16 +130,22 @@ pub enum CatalogError {
     DuplicateInputId {
         input_id: String,
     },
+    AllocationFailed {
+        context: &'static str,
+        requested: usize,
+    },
 }
 
 impl CatalogError {
     pub const fn status_code(&self) -> &'static str {
         match self {
             Self::Io { .. } => "io_error",
+            Self::InvalidDefinition { source, .. } => source.status_code(),
             Self::Json { .. }
             | Self::BlankLine { .. }
-            | Self::InvalidDefinition { .. }
-            | Self::DuplicateInputId { .. } => "invalid_input",
+            | Self::InvalidEncoding { .. }
+            | Self::DuplicateInputId { .. }
+            | Self::AllocationFailed { .. } => "invalid_input",
         }
     }
 }
@@ -129,11 +162,24 @@ impl fmt::Display for CatalogError {
                 write!(formatter, "invalid JSON on catalog line {line}: {message}")
             }
             Self::BlankLine { line } => write!(formatter, "blank catalog line {line}"),
+            Self::InvalidEncoding { line } => {
+                write!(formatter, "catalog line {line} is not valid UTF-8")
+            }
             Self::InvalidDefinition { line, source } => {
-                write!(formatter, "invalid_input on catalog line {line}: {source}")
+                write!(
+                    formatter,
+                    "{} on catalog line {line}: {source}",
+                    source.status_code()
+                )
             }
             Self::DuplicateInputId { input_id } => {
                 write!(formatter, "duplicate catalog input_id {input_id}")
+            }
+            Self::AllocationFailed { context, requested } => {
+                write!(
+                    formatter,
+                    "cannot reserve {requested} entries for {context}"
+                )
             }
         }
     }
@@ -144,7 +190,11 @@ impl std::error::Error for CatalogError {
         match self {
             Self::Io { source, .. } => Some(source),
             Self::InvalidDefinition { source, .. } => Some(source),
-            Self::Json { .. } | Self::BlankLine { .. } | Self::DuplicateInputId { .. } => None,
+            Self::Json { .. }
+            | Self::BlankLine { .. }
+            | Self::InvalidEncoding { .. }
+            | Self::DuplicateInputId { .. }
+            | Self::AllocationFailed { .. } => None,
         }
     }
 }

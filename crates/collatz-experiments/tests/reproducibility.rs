@@ -5,9 +5,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use collatz_experiments::{
     Catalog, ControlError, ControlSpecification, EngineOutcome, EnginePolicy,
     ExperimentConfigError, ExperimentConfiguration, ExperimentStatus, InputRole,
-    MAX_SAMPLES_PER_INPUT_V1, MetricCompleteness, NumberConstruction, NumberDefinition, Provenance,
-    RejectionPolicy, ValidatedNumber, ValidationState, ValueOrigin, generate_controls,
-    program_commit, program_source_dirty, run_configuration,
+    MAX_OBSERVATIONS_V1, MAX_SAMPLES_PER_INPUT_V1, MetricCompleteness, NumberConstruction,
+    NumberDefinition, Provenance, ProvenanceSource, RejectionPolicy, ValidatedNumber,
+    ValidationState, ValueOrigin, generate_controls, program_source_dirty, program_source_sha256,
+    run_configuration,
 };
 use proptest::prelude::*;
 
@@ -113,15 +114,15 @@ fn exp002_plan_is_byte_identical_and_pins_the_first_control_word() {
 }
 
 #[test]
-fn configuration_rejects_a_program_commit_not_embedded_in_the_build() {
+fn configuration_rejects_a_program_source_hash_not_embedded_in_the_build() {
     let catalog = reviewed_catalog();
     let mut configuration = load_configuration("experiments/EXP-001.json");
-    configuration.program_commit = "0".repeat(40);
+    configuration.program_source_sha256 = "0".repeat(64);
 
     assert!(matches!(
         configuration.materialize(&catalog),
-        Err(ExperimentConfigError::ProgramCommitMismatch { declared, built })
-            if declared == "0".repeat(40) && built == program_commit()
+        Err(ExperimentConfigError::ProgramSourceSha256Mismatch { declared, built })
+            if declared == "0".repeat(64) && built == program_source_sha256()
     ));
 }
 
@@ -131,7 +132,7 @@ fn results_take_program_provenance_from_the_built_library() {
     let run = run_configuration(configuration_path.path()).expect("EXP-001 succeeds");
 
     assert!(run.records.iter().all(|record| {
-        record.program_commit == program_commit()
+        record.program_source_sha256 == program_source_sha256()
             && record.program_source_dirty == program_source_dirty()
     }));
 }
@@ -225,6 +226,29 @@ fn version_one_rejects_an_unbounded_control_sample_before_allocation() {
             maximum: MAX_SAMPLES_PER_INPUT_V1,
         })
     );
+}
+
+#[test]
+fn version_one_rejects_too_many_total_observations_before_materialization() {
+    let mut configuration = load_configuration("experiments/EXP-002.json");
+    configuration.input_ids = vec![
+        "literal-1".into(),
+        "literal-2".into(),
+        "literal-3".into(),
+        "literal-27".into(),
+    ];
+    configuration
+        .controls
+        .as_mut()
+        .expect("fixture controls exist")
+        .samples_per_input = MAX_SAMPLES_PER_INPUT_V1;
+    let requested = 4 * (MAX_SAMPLES_PER_INPUT_V1 as usize + 1);
+
+    assert!(matches!(
+        configuration.validate(),
+        Err(ExperimentConfigError::TooManyObservations { requested: actual, maximum })
+            if actual == requested && maximum == MAX_OBSERVATIONS_V1
+    ));
 }
 
 #[test]
@@ -410,6 +434,7 @@ fn reference_overflow_is_distinct_and_counts_no_failed_transition() {
         },
         provenance: Provenance {
             origin: ValueOrigin::Generated,
+            source_kind: ProvenanceSource::Local,
             source: "Rust u128 boundary".into(),
             external_id: None,
             retrieval_date: None,
@@ -460,6 +485,7 @@ fn reference_input_above_u128_is_a_validated_engine_error() {
         },
         provenance: Provenance {
             origin: ValueOrigin::Generated,
+            source_kind: ProvenanceSource::Local,
             source: "Rust u128 boundary".into(),
             external_id: None,
             retrieval_date: None,
@@ -535,6 +561,7 @@ proptest! {
             construction: NumberConstruction::Mersenne { exponent },
             provenance: Provenance {
                 origin: ValueOrigin::Generated,
+                source_kind: ProvenanceSource::Local,
                 source: "property fixture".into(),
                 external_id: None,
                 retrieval_date: None,

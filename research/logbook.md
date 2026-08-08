@@ -9,7 +9,7 @@ When an entry summarizes a run, track only the MVP human-summary fields:
 experiment ID; number name and provenance; exact formula or generator
 parameters; input bit length; classical steps to one when known; peak value or
 peak bit length; first descent when observed; termination status; elapsed time;
-program version/commit; and validation method. Rich machine records remain in
+program-source SHA-256; and validation method. Rich machine records remain in
 the versioned result format rather than expanding the logbook.
 
 ## 2026-08-02

@@ -17,7 +17,7 @@
     "controls",
     "verified_bound",
     "output_format_version",
-    "program_commit"
+    "program_source_sha256"
   ],
   "properties": {
     "schema_version": { "const": 1 },
@@ -31,6 +31,7 @@
     "input_ids": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 16384,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/identifier" }
     },
@@ -65,10 +66,10 @@
       ]
     },
     "output_format_version": { "const": 1 },
-    "program_commit": {
+    "program_source_sha256": {
       "type": "string",
-      "pattern": "^[0-9a-f]{40}$",
-      "description": "Expected executable-source commit; materialization rejects a value that differs from the commit embedded in the built program."
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Expected stable SHA-256 of the executable-source snapshot; materialization rejects a value that differs from the hash embedded in the built program."
     }
   },
   "$defs": {
@@ -94,7 +95,12 @@
         "algorithm": { "const": "chacha20" },
         "algorithm_version": { "const": "rand_chacha-0.10.0" },
         "seed_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "samples_per_input": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "samples_per_input": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "description": "The runtime also enforces input_ids.length * (1 + samples_per_input) <= 16384."
+        },
         "mapping_version": { "const": "sha256-subseed-little-endian-mask-v1" },
         "rejection_policy": {
           "type": "object",

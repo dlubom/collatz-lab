@@ -8,6 +8,8 @@ use sha2::{Digest, Sha256};
 
 /// The only number-definition schema accepted by this MVP slice.
 pub const NUMBER_DEFINITION_SCHEMA_VERSION: u32 = 1;
+/// Largest Fermat index supported by the version-1 exact-integer shift interface.
+pub const MAX_FERMAT_INDEX_V1: u32 = 31;
 
 /// A reconstructible positive-integer definition plus declared provenance.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -59,12 +61,15 @@ impl NumberConstruction {
                 Ok((Integer::from(1) << exponent) - 1)
             }
             Self::Fermat { index } => {
-                let shift = 1_u32.checked_shl(*index).ok_or_else(|| {
-                    NumberValidationError::ReconstructionLimit {
+                if *index > MAX_FERMAT_INDEX_V1 {
+                    return Err(NumberValidationError::ReconstructionLimit {
                         construction: self.formula(),
-                        reason: "2^index does not fit the exact-integer shift interface".into(),
-                    }
-                })?;
+                        reason: format!(
+                            "Fermat index exceeds the version-1 maximum {MAX_FERMAT_INDEX_V1}"
+                        ),
+                    });
+                }
+                let shift = 1_u32 << index;
                 Ok((Integer::from(1) << shift) + 1)
             }
             Self::Repunit { base, length } => {
@@ -103,11 +108,20 @@ pub enum ValueOrigin {
     Imported,
 }
 
+/// Whether provenance names a local source or an externally retrieved source.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProvenanceSource {
+    Local,
+    External,
+}
+
 /// Source and reconstruction metadata carried into every result.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Provenance {
     pub origin: ValueOrigin,
+    pub source_kind: ProvenanceSource,
     pub source: String,
     pub external_id: Option<String>,
     pub retrieval_date: Option<String>,
@@ -217,8 +231,11 @@ pub enum NumberValidationError {
         declared: u32,
         actual: u32,
     },
-    ImportedFieldMissing {
+    RequiredProvenanceFieldMissing {
         field: &'static str,
+    },
+    InvalidProvenanceCombination {
+        reason: &'static str,
     },
     InvalidRetrievalDate {
         value: String,
@@ -236,7 +253,12 @@ pub enum NumberValidationError {
 impl NumberValidationError {
     /// Stable experiment-status code for definition failures.
     pub const fn status_code(&self) -> &'static str {
-        "invalid_input"
+        match self {
+            Self::MetadataMismatch { .. }
+            | Self::ImportedSha256Mismatch { .. }
+            | Self::GeneratedValueHasImportedHash => "verification_failed",
+            _ => "invalid_input",
+        }
     }
 }
 
@@ -276,8 +298,11 @@ impl fmt::Display for NumberValidationError {
                 formatter,
                 "{field} mismatch: declared {declared}, reconstructed {actual}"
             ),
-            Self::ImportedFieldMissing { field } => {
-                write!(formatter, "imported value requires {field}")
+            Self::RequiredProvenanceFieldMissing { field } => {
+                write!(formatter, "provenance requires {field}")
+            }
+            Self::InvalidProvenanceCombination { reason } => {
+                write!(formatter, "invalid provenance combination: {reason}")
             }
             Self::InvalidRetrievalDate { value } => {
                 write!(formatter, "retrieval_date must be YYYY-MM-DD: {value}")
@@ -374,29 +399,39 @@ fn validate_provenance(
     provenance: &Provenance,
     canonical_decimal: &[u8],
 ) -> Result<(), NumberValidationError> {
-    match provenance.origin {
-        ValueOrigin::Generated => {
-            if provenance.imported_value_sha256.is_some() {
-                return Err(NumberValidationError::GeneratedValueHasImportedHash);
-            }
-            if let Some(external_id) = provenance.external_id.as_deref() {
-                validate_nonempty("provenance.external_id", external_id)?;
-                let retrieval_date = require_present(
-                    "provenance.retrieval_date",
-                    provenance.retrieval_date.as_deref(),
-                )?;
-                validate_date(retrieval_date)?;
-            } else if let Some(retrieval_date) = provenance.retrieval_date.as_deref() {
-                validate_date(retrieval_date)?;
+    match provenance.source_kind {
+        ProvenanceSource::Local => {
+            if provenance.external_id.is_some() || provenance.retrieval_date.is_some() {
+                return Err(NumberValidationError::InvalidProvenanceCombination {
+                    reason: "local provenance must not declare external_id or retrieval_date",
+                });
             }
         }
-        ValueOrigin::Imported => {
-            require_present("provenance.external_id", provenance.external_id.as_deref())?;
+        ProvenanceSource::External => {
             let retrieval_date = require_present(
                 "provenance.retrieval_date",
                 provenance.retrieval_date.as_deref(),
             )?;
             validate_date(retrieval_date)?;
+            if let Some(external_id) = provenance.external_id.as_deref() {
+                validate_nonempty("provenance.external_id", external_id)?;
+            }
+        }
+    }
+
+    match provenance.origin {
+        ValueOrigin::Generated => {
+            if provenance.imported_value_sha256.is_some() {
+                return Err(NumberValidationError::GeneratedValueHasImportedHash);
+            }
+        }
+        ValueOrigin::Imported => {
+            if provenance.source_kind != ProvenanceSource::External {
+                return Err(NumberValidationError::InvalidProvenanceCombination {
+                    reason: "imported values require external provenance",
+                });
+            }
+            require_present("provenance.external_id", provenance.external_id.as_deref())?;
             let declared_hash = require_present(
                 "provenance.imported_value_sha256",
                 provenance.imported_value_sha256.as_deref(),
@@ -421,7 +456,7 @@ fn require_present<'a>(
 ) -> Result<&'a str, NumberValidationError> {
     value
         .filter(|value| !value.trim().is_empty())
-        .ok_or(NumberValidationError::ImportedFieldMissing { field })
+        .ok_or(NumberValidationError::RequiredProvenanceFieldMissing { field })
 }
 
 fn validate_date(value: &str) -> Result<(), NumberValidationError> {

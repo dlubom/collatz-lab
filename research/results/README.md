@@ -11,7 +11,7 @@ and does not hold enormous integer expansions or complete large trajectories.
 - Every external large artifact is represented by its filename or stable URI,
   byte size, media/format type, and SHA-256 hash.
 - Every result names its experiment ID, configuration ID, run ID, input ID,
-  build-embedded program commit, and executable-source dirty state.
+  build-embedded program-source SHA-256, and executable-source dirty state.
 - Every result states its engine policy, termination status, limits, and
   validation method.
 - An unusual result is labeled `needs-reproduction` until independent
