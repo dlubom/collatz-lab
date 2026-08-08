@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dlubom/collatz-lab/schemas/experiment-config-v1.schema.json",
+  "title": "Collatz Lab experiment configuration v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment_id",
+    "name",
+    "catalog_path",
+    "input_ids",
+    "engine_policy",
+    "limits",
+    "metrics",
+    "primary_metric",
+    "controls",
+    "verified_bound",
+    "output_format_version",
+    "program_commit"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "experiment_id": { "$ref": "#/$defs/identifier" },
+    "name": { "type": "string", "minLength": 1 },
+    "catalog_path": { "type": "string", "minLength": 1 },
+    "input_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "engine_policy": { "enum": ["reference", "bigint", "hybrid"] },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classical_step_limit", "time_limit_ms", "resource_limit_bytes"],
+      "properties": {
+        "classical_step_limit": { "type": "integer", "minimum": 0 },
+        "time_limit_ms": { "type": ["integer", "null"], "minimum": 1 },
+        "resource_limit_bytes": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/metric" }
+    },
+    "primary_metric": { "$ref": "#/$defs/metric" },
+    "controls": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/controls" }
+      ]
+    },
+    "verified_bound": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/verifiedBound" }
+      ]
+    },
+    "output_format_version": { "const": 1 },
+    "program_commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "metric": {
+      "enum": ["classical_steps", "observed_peak", "first_descent"]
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "algorithm_version",
+        "seed_hex",
+        "samples_per_input",
+        "mapping_version",
+        "rejection_policy"
+      ],
+      "properties": {
+        "algorithm": { "const": "chacha20" },
+        "algorithm_version": { "const": "rand_chacha-0.10.0" },
+        "seed_hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "samples_per_input": { "type": "integer", "minimum": 1 },
+        "mapping_version": { "const": "sha256-subseed-little-endian-mask-v1" },
+        "rejection_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "parity_population",
+            "reject_equal_to_special",
+            "reject_duplicates_within_match",
+            "rejection_order"
+          ],
+          "properties": {
+            "parity_population": { "const": "both" },
+            "reject_equal_to_special": { "const": true },
+            "reject_duplicates_within_match": { "const": true },
+            "rejection_order": { "const": "equality_then_duplicate" }
+          }
+        }
+      }
+    },
+    "verifiedBound": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inclusive_upper_bound", "source", "version", "retrieval_date"],
+      "properties": {
+        "inclusive_upper_bound": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "source": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "retrieval_date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+      }
+    }
+  }
+}

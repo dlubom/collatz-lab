@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "experiment_id": "exp-002",
+  "name": "Small Mersenne versus matched-control smoke experiment",
+  "catalog_path": "catalog/inputs-v1.jsonl",
+  "input_ids": ["mersenne-5", "mersenne-7", "mersenne-13"],
+  "engine_policy": "hybrid",
+  "limits": {
+    "classical_step_limit": 10000,
+    "time_limit_ms": null,
+    "resource_limit_bytes": null
+  },
+  "metrics": ["first_descent", "classical_steps", "observed_peak"],
+  "primary_metric": "first_descent",
+  "controls": {
+    "algorithm": "chacha20",
+    "algorithm_version": "rand_chacha-0.10.0",
+    "seed_hex": "c011a72ab5e1d002c011a72ab5e1d002c011a72ab5e1d002c011a72ab5e1d002",
+    "samples_per_input": 8,
+    "mapping_version": "sha256-subseed-little-endian-mask-v1",
+    "rejection_policy": {
+      "parity_population": "both",
+      "reject_equal_to_special": true,
+      "reject_duplicates_within_match": true,
+      "rejection_order": "equality_then_duplicate"
+    }
+  },
+  "verified_bound": null,
+  "output_format_version": 1,
+  "program_commit": "f1e37d489c30fd38920a9906a6b22e096989413f"
+}
